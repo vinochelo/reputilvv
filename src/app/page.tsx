@@ -194,7 +194,7 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={group.n_doc} ref={el => reportRefs.current[index] = el} className="p-6 bg-white text-black border rounded-lg shadow-sm">
+                    <div key={`${group.n_doc}-${index}`} ref={el => reportRefs.current[index] = el} className="p-6 bg-white text-black border rounded-lg shadow-sm">
                       <header className="mb-4">
                           <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
                           <div className="text-sm mt-2">
@@ -222,7 +222,7 @@ export default function Home() {
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
-                              <TableRow key={itemIndex}>
+                              <TableRow key={`${item['Doc.material']}-${itemIndex}`}>
                                 <TableCell>{item['Doc.material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
                                 <TableCell>{item['Nº doc.']}</TableCell>
