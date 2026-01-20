@@ -20,11 +20,21 @@ export default function Home() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getDocId = (item: any) => {
-    // Handles variations like 'Nº doc.', 'N° doc.', 'Nro. Doc.', etc.
+  const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
-    const docIdKey = keys.find(key => key.toLowerCase().trim().replace('.', '') === 'nº doc' || key.toLowerCase().trim().replace('.', '') === 'n° doc');
-    return docIdKey ? item[docIdKey] : undefined;
+    // This regex looks for 'n', optionally followed by 'º', '°', or 'ro', then an optional dot, optional space, and then 'doc'.
+    // It is case-insensitive ('i' flag).
+    const docIdRegex = /n(º|°|ro)?\.?\s*doc/i;
+    const docIdKey = keys.find(key => docIdRegex.test(key.trim()));
+    
+    if (docIdKey) {
+        const value = item[docIdKey];
+        // Ensure we return the value even if it's 0, but not if it's null or undefined.
+        if (value !== null && value !== undefined) {
+            return value;
+        }
+    }
+    return undefined;
   };
   
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -109,10 +119,11 @@ export default function Home() {
       return acc;
     }, []);
 
-    if (grouped.length === 0) {
+    if (grouped.length === 0 && data.length > 0) {
+      const firstRowKeys = Object.keys(data[0]).join(', ');
       toast({
         title: "No se pudo agrupar",
-        description: "No se encontraron datos para agrupar. Revisa que la columna de 'Nº doc.' exista y tenga valores.",
+        description: `No se encontraron datos para agrupar. Revisa que la columna de 'Nº doc.' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
         variant: "destructive",
       });
       return;
