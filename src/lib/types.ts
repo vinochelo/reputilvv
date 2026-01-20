@@ -22,15 +22,7 @@ export type ExcelData = {
 
 export type GroupedData = {
   n_doc: number; // The group key
-  
-  // The items in the group
   items: ExcelData[];
-
-  // Some header info for the group
-  cliente: string;
-  rut: string;
-  
-  // Totals for the group
   totalCantidad: number;
   totalCostoTotal: number;
   totalPrecioVenta: number;

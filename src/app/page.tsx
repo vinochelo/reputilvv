@@ -44,8 +44,6 @@ export default function Home() {
       if (!group) {
         group = {
           n_doc: item['Nº doc.'],
-          cliente: item['Nombre cliente'],
-          rut: `${item['Rut']}-${item['Dv']}`,
           items: [],
           totalCantidad: 0,
           totalCostoTotal: 0,
@@ -159,10 +157,8 @@ export default function Home() {
                     <div key={group.n_doc} ref={el => reportRefs.current[index] = el} className="p-6 bg-white text-black border rounded-lg shadow-sm">
                       <header className="mb-4">
                           <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="grid grid-cols-3 text-sm mt-2 gap-x-4">
+                          <div className="text-sm mt-2">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
-                              <p><span className="font-semibold">Cliente:</span> {group.cliente}</p>
-                              <p><span className="font-semibold">RUT:</span> {group.rut}</p>
                           </div>
                       </header>
                       <Table>
