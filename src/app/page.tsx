@@ -20,6 +20,13 @@ export default function Home() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getDocId = (item: any) => {
+    // Handles variations like 'Nº doc.', 'N° doc.', 'Nro. Doc.', etc.
+    const keys = Object.keys(item);
+    const docIdKey = keys.find(key => key.toLowerCase().trim().replace('.', '') === 'nº doc' || key.toLowerCase().trim().replace('.', '') === 'n° doc');
+    return docIdKey ? item[docIdKey] : undefined;
+  };
+  
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -72,9 +79,7 @@ export default function Home() {
 
   const processData = (data: ExcelData[]) => {
     const grouped = data.reduce<GroupedData[]>((acc, item) => {
-      const itemAsAny = item as any;
-      // Use nullish coalescing operator (??) to correctly handle 0 or empty strings as valid keys.
-      const docId = item['Nº doc.'] ?? itemAsAny['N° doc.'];
+      const docId = getDocId(item);
 
       if (docId === undefined || docId === null) {
         return acc; // Skip items without a document number.
@@ -96,13 +101,23 @@ export default function Home() {
       }
       
       group.items.push(item);
-      group.totalCantidad += item['Cantidad'] ?? 0;
-      group.totalCostoTotal += item['Costo Total'] ?? 0;
-      group.totalPrecioVenta += item['Precio Venta'] ?? 0;
-      group.totalValorAPagar += item['Valor a pagar'] ?? 0;
-      group.totalUtilidad += item['Utilidad %'] ?? 0;
+      group.totalCantidad += Number(item['Cantidad'] ?? 0);
+      group.totalCostoTotal += Number(item['Costo Total'] ?? 0);
+      group.totalPrecioVenta += Number(item['Precio Venta'] ?? 0);
+      group.totalValorAPagar += Number(item['Valor a pagar'] ?? 0);
+      group.totalUtilidad += Number(item['Utilidad %'] ?? 0);
       return acc;
     }, []);
+
+    if (grouped.length === 0) {
+      toast({
+        title: "No se pudo agrupar",
+        description: "No se encontraron datos para agrupar. Revisa que la columna de 'Nº doc.' exista y tenga valores.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessedData(grouped);
   };
 
@@ -110,6 +125,8 @@ export default function Home() {
     if (!pdfContentRef.current) return;
 
     setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
+    
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const reportElements = Array.from(pdfContentRef.current.children);
@@ -244,7 +261,7 @@ export default function Home() {
                               <TableRow key={itemIndex}>
                                 <TableCell>{item['Documento material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
-                                <TableCell>{item['Nº doc.'] ?? (item as any)['N° doc.']}</TableCell>
+                                <TableCell>{getDocId(item)}</TableCell>
                                 <TableCell>{item['Centro']}</TableCell>
                                 <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
                                 <TableCell>{item['Proveedor']}</TableCell>
