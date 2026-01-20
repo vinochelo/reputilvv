@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
@@ -17,7 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
-  const reportRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,28 +92,36 @@ export default function Home() {
       return acc;
     }, []);
     setProcessedData(grouped);
-    reportRefs.current = grouped.map(() => null);
   };
 
   const handleDownloadPdf = async () => {
-    if (!processedData || reportRefs.current.length === 0) return;
+    if (!pdfContentRef.current) return;
 
     setLoading(true);
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
+    const reportElements = Array.from(pdfContentRef.current.children);
     
-    for (let i = 0; i < processedData.length; i++) {
-      const reportElement = reportRefs.current[i];
+    for (let i = 0; i < reportElements.length; i++) {
+      const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         if (i > 0) {
           pdf.addPage();
         }
-        const canvas = await html2canvas(reportElement, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+        try {
+            const canvas = await html2canvas(reportElement, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+        } catch(e) {
+            console.error(e);
+            toast({
+              title: "Error al generar PDF",
+              description: "No se pudo procesar uno de los reportes para el PDF.",
+              variant: "destructive",
+            });
+        }
       }
     }
 
@@ -192,9 +199,9 @@ export default function Home() {
                 </div>
             </CardHeader>
             <CardContent>
-                <div id="pdf-content" className="space-y-8">
+                <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} ref={el => reportRefs.current[index] = el} className="p-6 bg-white text-black border rounded-lg shadow-sm">
+                    <div key={`${group.n_doc}-${index}`} className="p-6 bg-white text-black border rounded-lg shadow-sm">
                       <header className="mb-4">
                           <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
                           <div className="text-sm mt-2">
@@ -222,8 +229,8 @@ export default function Home() {
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
-                              <TableRow key={`${item['Doc.material']}-${itemIndex}`}>
-                                <TableCell>{item['Doc.material']}</TableCell>
+                              <TableRow key={`${item['Documento material']}-${itemIndex}`}>
+                                <TableCell>{item['Documento material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
                                 <TableCell>{item['Nº doc.']}</TableCell>
                                 <TableCell>{item['Centro']}</TableCell>

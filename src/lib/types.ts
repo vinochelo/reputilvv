@@ -1,5 +1,5 @@
 export type ExcelData = {
-  'Doc.material': number;
+  'Documento material': number;
   'Factura': string;
   'Nº doc.': number;
   'Centro': string;
