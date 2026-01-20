@@ -40,19 +40,25 @@ export default function Home() {
 
   const processData = (data: ExcelData[]) => {
     const grouped = data.reduce<GroupedData[]>((acc, item) => {
-      let group = acc.find(g => g.n_doc === item['N doc']);
+      let group = acc.find(g => g.n_doc === item['Nº doc.']);
       if (!group) {
         group = {
-          n_doc: item['N doc'],
+          n_doc: item['Nº doc.'],
           cliente: item['Nombre cliente'],
           rut: `${item['Rut']}-${item['Dv']}`,
           items: [],
-          totalPagar: 0,
+          totalCantidad: 0,
+          totalCostoTotal: 0,
+          totalPrecioVenta: 0,
+          totalValorAPagar: 0,
         };
         acc.push(group);
       }
       group.items.push(item);
-      group.totalPagar += item['Valor a pagar'];
+      group.totalCantidad += item['Cantidad'];
+      group.totalCostoTotal += item['Costo Total'];
+      group.totalPrecioVenta += item['Precio Venta'];
+      group.totalValorAPagar += item['Valor a pagar'];
       return acc;
     }, []);
     setProcessedData(grouped);
@@ -126,7 +132,7 @@ export default function Home() {
         </Card>
       ) : (
         <div className="space-y-8">
-          <Card className="max-w-4xl mx-auto shadow-lg">
+          <Card className="max-w-7xl mx-auto shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className="font-headline text-2xl">Previsualización del Reporte</CardTitle>
@@ -152,8 +158,8 @@ export default function Home() {
                 {processedData.map((group, index) => (
                     <div key={group.n_doc} ref={el => reportRefs.current[index] = el} className="p-6 bg-white text-black border rounded-lg shadow-sm">
                       <header className="mb-4">
-                          <h2 className="font-headline text-xl font-bold">Reporte de Documento</h2>
-                          <div className="grid grid-cols-2 text-sm mt-2 gap-x-4">
+                          <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
+                          <div className="grid grid-cols-3 text-sm mt-2 gap-x-4">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                               <p><span className="font-semibold">Cliente:</span> {group.cliente}</p>
                               <p><span className="font-semibold">RUT:</span> {group.rut}</p>
@@ -161,32 +167,58 @@ export default function Home() {
                       </header>
                       <Table>
                           <TableHeader>
-                          <TableRow>
-                              <TableHead className="font-headline">Tipo doc</TableHead>
-                              <TableHead className="font-headline">Folio</TableHead>
-                              <TableHead className="font-headline">Fecha Emisión</TableHead>
-                              <TableHead className="font-headline">Fecha Venc.</TableHead>
+                            <TableRow>
+                              <TableHead className="font-headline">Doc.material</TableHead>
+                              <TableHead className="font-headline">Factura</TableHead>
+                              <TableHead className="font-headline">Centro</TableHead>
+                              <TableHead className="font-headline">Fecha Factura</TableHead>
+                              <TableHead className="font-headline">Proveedor</TableHead>
+                              <TableHead className="font-headline">Nombre del proveedor</TableHead>
+                              <TableHead className="font-headline">Material</TableHead>
+                              <TableHead className="font-headline">Texto breve de material</TableHead>
+                              <TableHead className="font-headline text-right">Cantidad</TableHead>
+                              <TableHead className="font-headline text-right">Costo Total</TableHead>
+                              <TableHead className="font-headline text-right">Precio Venta</TableHead>
+                              <TableHead className="font-headline text-right">Utilidad %</TableHead>
                               <TableHead className="font-headline text-right">Valor a pagar</TableHead>
-                          </TableRow>
+                            </TableRow>
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
                               <TableRow key={itemIndex}>
-                              <TableCell>{item['Tipo doc']}</TableCell>
-                              <TableCell>{item.Folio}</TableCell>
-                              <TableCell>{item['Fecha emision']}</TableCell>
-                              <TableCell>{item['Fecha venc']}</TableCell>
-                              <TableCell className="text-right">{item['Valor a pagar'].toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</TableCell>
+                                <TableCell>{item['Doc.material']}</TableCell>
+                                <TableCell>{item['Factura']}</TableCell>
+                                <TableCell>{item['Centro']}</TableCell>
+                                <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
+                                <TableCell>{item['Proveedor']}</TableCell>
+                                <TableCell>{item['Nombre del proveedor']}</TableCell>
+                                <TableCell>{item['Material']}</TableCell>
+                                <TableCell>{item['Texto breve de material']}</TableCell>
+                                <TableCell className="text-right">{item['Cantidad'].toFixed(3)}</TableCell>
+                                <TableCell className="text-right">{item['Costo Total'].toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{item['Precio Venta'].toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{item['Utilidad %'].toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{item['Valor a pagar'].toFixed(2)}</TableCell>
                               </TableRow>
                           ))}
                           </TableBody>
                           <TableFooter>
-                          <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={4} className="font-headline text-right font-bold text-lg">Total</TableCell>
+                            <TableRow className="bg-accent/30 hover:bg-accent/40">
+                              <TableCell colSpan={8} className="font-headline text-right font-bold text-lg">Total</TableCell>
                               <TableCell className="font-headline text-right font-bold text-lg">
-                              {group.totalPagar.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
+                                {group.totalCantidad.toFixed(3)}
                               </TableCell>
-                          </TableRow>
+                              <TableCell className="font-headline text-right font-bold text-lg">
+                                {group.totalCostoTotal.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="font-headline text-right font-bold text-lg">
+                                {group.totalPrecioVenta.toFixed(2)}
+                              </TableCell>
+                              <TableCell />
+                              <TableCell className="font-headline text-right font-bold text-lg">
+                                {group.totalValorAPagar.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
                           </TableFooter>
                       </Table>
                     </div>
