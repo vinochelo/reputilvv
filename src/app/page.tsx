@@ -67,7 +67,7 @@ export default function Home() {
     if (!processedData || reportRefs.current.length === 0) return;
 
     setLoading(true);
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     
     for (let i = 0; i < processedData.length; i++) {
