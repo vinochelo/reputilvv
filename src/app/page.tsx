@@ -22,8 +22,7 @@ export default function Home() {
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
-    // This regex looks for 'n', optionally followed by 'º', '°', or 'ro', then an optional dot, optional space, and then 'doc'.
-    // It is case-insensitive ('i' flag).
+    // This regex looks for variations of "Nº doc."
     const docIdRegex = /n(º|°|ro)?\.?\s*doc/i;
     const docIdKey = keys.find(key => docIdRegex.test(key.trim()));
     
@@ -123,7 +122,7 @@ export default function Home() {
       const firstRowKeys = Object.keys(data[0]).join(', ');
       toast({
         title: "No se pudo agrupar",
-        description: `No se encontraron datos para agrupar. Revisa que la columna de 'Nº doc.' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
+        description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº doc.' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
         variant: "destructive",
       });
       return;
@@ -241,7 +240,7 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-6 bg-white text-black border rounded-lg shadow-sm">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-xs">
                       <header className="mb-4">
                           <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
                           <div className="text-sm mt-2">
@@ -251,58 +250,58 @@ export default function Home() {
                       <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="font-headline">Documento material</TableHead>
-                              <TableHead className="font-headline">Factura</TableHead>
-                              <TableHead className="font-headline">Nº doc.</TableHead>
-                              <TableHead className="font-headline">Centro</TableHead>
-                              <TableHead className="font-headline">Fecha Factura</TableHead>
-                              <TableHead className="font-headline">Proveedor</TableHead>
-                              <TableHead className="font-headline">Nombre del proveedor</TableHead>
-                              <TableHead className="font-headline">Material</TableHead>
-                              <TableHead className="font-headline">Texto breve de material</TableHead>
-                              <TableHead className="font-headline text-right">Cantidad</TableHead>
-                              <TableHead className="font-headline text-right">Costo Total</TableHead>
-                              <TableHead className="font-headline text-right">Precio Venta</TableHead>
-                              <TableHead className="font-headline text-right">Utilidad %</TableHead>
-                              <TableHead className="font-headline text-right">Valor a pagar</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Documento material</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Factura</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Nº doc.</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Centro</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Fecha Factura</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Proveedor</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Nombre del proveedor</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Material</TableHead>
+                              <TableHead className="font-headline px-1 py-1 h-auto">Texto breve de material</TableHead>
+                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Cantidad</TableHead>
+                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Costo Total</TableHead>
+                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Precio Venta</TableHead>
+                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Utilidad %</TableHead>
+                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Valor a pagar</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
                               <TableRow key={itemIndex}>
-                                <TableCell>{item['Documento material']}</TableCell>
-                                <TableCell>{item['Factura']}</TableCell>
-                                <TableCell>{getDocId(item)}</TableCell>
-                                <TableCell>{item['Centro']}</TableCell>
-                                <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
-                                <TableCell>{item['Proveedor']}</TableCell>
-                                <TableCell>{item['Nombre del proveedor']}</TableCell>
-                                <TableCell>{item['Material']}</TableCell>
-                                <TableCell>{item['Texto breve de material']}</TableCell>
-                                <TableCell className="text-right">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
-                                <TableCell className="text-right">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Documento material']}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Factura']}</TableCell>
+                                <TableCell className="px-1 py-1">{getDocId(item)}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Centro']}</TableCell>
+                                <TableCell className="px-1 py-1">{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Proveedor']}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Nombre del proveedor']}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Material']}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Texto breve de material']}</TableCell>
+                                <TableCell className="text-right px-1 py-1">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                                <TableCell className="text-right px-1 py-1">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-1">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-1">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-1">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                               </TableRow>
                           ))}
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={9} className="font-headline text-right font-bold text-lg">Total</TableCell>
-                              <TableCell className="font-headline text-right font-bold text-lg">
+                              <TableCell colSpan={9} className="font-headline text-right font-bold text-sm px-1 py-1">Total</TableCell>
+                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-lg">
+                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
                                 {group.totalCostoTotal.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-lg">
+                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
                                 {group.totalPrecioVenta.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-lg">
+                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
                                 {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-lg">
+                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
                                 {group.totalValorAPagar.toFixed(2)}
                               </TableCell>
                             </TableRow>
