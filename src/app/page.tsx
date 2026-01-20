@@ -164,8 +164,9 @@ export default function Home() {
                       <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="font-headline">Doc.material</TableHead>
+                              <TableHead className="font-headline">Documento material</TableHead>
                               <TableHead className="font-headline">Factura</TableHead>
+                              <TableHead className="font-headline">Nº doc.</TableHead>
                               <TableHead className="font-headline">Centro</TableHead>
                               <TableHead className="font-headline">Fecha Factura</TableHead>
                               <TableHead className="font-headline">Proveedor</TableHead>
@@ -184,6 +185,7 @@ export default function Home() {
                               <TableRow key={itemIndex}>
                                 <TableCell>{item['Doc.material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
+                                <TableCell>{item['Nº doc.']}</TableCell>
                                 <TableCell>{item['Centro']}</TableCell>
                                 <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
                                 <TableCell>{item['Proveedor']}</TableCell>
@@ -200,7 +202,7 @@ export default function Home() {
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={8} className="font-headline text-right font-bold text-lg">Total</TableCell>
+                              <TableCell colSpan={9} className="font-headline text-right font-bold text-lg">Total</TableCell>
                               <TableCell className="font-headline text-right font-bold text-lg">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
