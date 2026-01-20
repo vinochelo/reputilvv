@@ -3,7 +3,7 @@ export type ExcelData = {
   'Factura': string;
   'Nº doc.': number;
   'Centro': string;
-  'Fecha Factura': string;
+  'Fecha Factura': string | Date;
   'Proveedor': number;
   'Nombre del proveedor': string;
   'Material': string;

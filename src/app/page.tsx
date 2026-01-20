@@ -3,17 +3,18 @@
 import { useState, useRef, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 import { UploadCloud, FileDown, Loader2, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import type { ExcelData, GroupedData } from '@/lib/types';
-import { mockExcelData } from '@/lib/mock-data';
 
 export default function Home() {
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const reportRefs = useRef<(HTMLDivElement | null)[]>([]);
   const { toast } = useToast();
@@ -31,10 +32,41 @@ export default function Home() {
         return;
       }
       setFileName(file.name);
-      
-      // Simulating Excel parsing. In a real app, you would use a library like 'xlsx' here.
-      // Using mock data for this demonstration.
-      processData(mockExcelData);
+      setParsing(true);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json<ExcelData>(worksheet);
+          
+          processData(jsonData);
+        } catch (error) {
+          console.error("Error parsing Excel file:", error);
+          toast({
+            title: "Error al procesar el archivo",
+            description: "No se pudo leer el archivo de Excel. Asegúrate de que el formato sea correcto.",
+            variant: "destructive",
+          });
+          resetState();
+        } finally {
+          setParsing(false);
+        }
+      };
+      reader.onerror = () => {
+        console.error("Error reading file");
+        toast({
+            title: "Error al leer el archivo",
+            description: "Ocurrió un error al intentar leer el archivo.",
+            variant: "destructive",
+        });
+        setParsing(false);
+        resetState();
+      }
+      reader.readAsArrayBuffer(file);
     }
   };
 
@@ -111,21 +143,28 @@ export default function Home() {
       {!processedData ? (
         <Card className="max-w-xl mx-auto shadow-lg border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
           <CardContent className="p-8">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <UploadCloud className="w-16 h-16 text-primary" />
-              <p className="text-lg font-semibold text-foreground">Arrastra y suelta tu archivo de Excel aquí</p>
-              <p className="text-muted-foreground">o</p>
-              <Button onClick={() => fileInputRef.current?.click()}>
-                Seleccionar Archivo
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept=".xlsx, .xls"
-              />
-            </div>
+            {parsing ? (
+              <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                  <Loader2 className="w-16 h-16 text-primary animate-spin" />
+                  <p className="text-lg font-semibold text-foreground">Procesando archivo...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                <UploadCloud className="w-16 h-16 text-primary" />
+                <p className="text-lg font-semibold text-foreground">Arrastra y suelta tu archivo de Excel aquí</p>
+                <p className="text-muted-foreground">o</p>
+                <Button onClick={() => fileInputRef.current?.click()}>
+                  Seleccionar Archivo
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept=".xlsx, .xls"
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
