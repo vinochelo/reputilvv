@@ -72,7 +72,14 @@ export default function Home() {
 
   const processData = (data: ExcelData[]) => {
     const grouped = data.reduce<GroupedData[]>((acc, item) => {
-      const docId = item['Nº doc.'] || (item as any)['N° doc.'];
+      const itemAsAny = item as any;
+      // Use nullish coalescing operator (??) to correctly handle 0 or empty strings as valid keys.
+      const docId = item['Nº doc.'] ?? itemAsAny['N° doc.'];
+
+      if (docId === undefined || docId === null) {
+        return acc; // Skip items without a document number.
+      }
+
       let group = acc.find(g => g.n_doc === docId);
 
       if (!group) {
@@ -89,11 +96,11 @@ export default function Home() {
       }
       
       group.items.push(item);
-      group.totalCantidad += item['Cantidad'];
-      group.totalCostoTotal += item['Costo Total'];
-      group.totalPrecioVenta += item['Precio Venta'];
-      group.totalValorAPagar += item['Valor a pagar'];
-      group.totalUtilidad += item['Utilidad %'];
+      group.totalCantidad += item['Cantidad'] ?? 0;
+      group.totalCostoTotal += item['Costo Total'] ?? 0;
+      group.totalPrecioVenta += item['Precio Venta'] ?? 0;
+      group.totalValorAPagar += item['Valor a pagar'] ?? 0;
+      group.totalUtilidad += item['Utilidad %'] ?? 0;
       return acc;
     }, []);
     setProcessedData(grouped);
@@ -237,18 +244,18 @@ export default function Home() {
                               <TableRow key={itemIndex}>
                                 <TableCell>{item['Documento material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
-                                <TableCell>{item['Nº doc.'] || (item as any)['N° doc.']}</TableCell>
+                                <TableCell>{item['Nº doc.'] ?? (item as any)['N° doc.']}</TableCell>
                                 <TableCell>{item['Centro']}</TableCell>
                                 <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
                                 <TableCell>{item['Proveedor']}</TableCell>
                                 <TableCell>{item['Nombre del proveedor']}</TableCell>
                                 <TableCell>{item['Material']}</TableCell>
                                 <TableCell>{item['Texto breve de material']}</TableCell>
-                                <TableCell className="text-right">{item['Cantidad'].toFixed(3)}</TableCell>
-                                <TableCell className="text-right">{item['Costo Total'].toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{item['Precio Venta'].toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{item['Utilidad %'].toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{item['Valor a pagar'].toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                                <TableCell className="text-right">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                               </TableRow>
                           ))}
                           </TableBody>
