@@ -72,7 +72,7 @@ export default function Home() {
 
   const processData = (data: ExcelData[]) => {
     const grouped = data.reduce<GroupedData[]>((acc, item) => {
-      const docId = item['Nº doc.'];
+      const docId = item['Nº doc.'] || (item as any)['N° doc.'];
       let group = acc.find(g => g.n_doc === docId);
 
       if (!group) {
@@ -237,7 +237,7 @@ export default function Home() {
                               <TableRow key={itemIndex}>
                                 <TableCell>{item['Documento material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
-                                <TableCell>{item['Nº doc.']}</TableCell>
+                                <TableCell>{item['Nº doc.'] || (item as any)['N° doc.']}</TableCell>
                                 <TableCell>{item['Centro']}</TableCell>
                                 <TableCell>{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
                                 <TableCell>{item['Proveedor']}</TableCell>
