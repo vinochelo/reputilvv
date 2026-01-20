@@ -72,10 +72,12 @@ export default function Home() {
 
   const processData = (data: ExcelData[]) => {
     const grouped = data.reduce<GroupedData[]>((acc, item) => {
-      let group = acc.find(g => g.n_doc === item['Nº doc.']);
+      const docId = item['Nº doc.'];
+      let group = acc.find(g => g.n_doc === docId);
+
       if (!group) {
         group = {
-          n_doc: item['Nº doc.'],
+          n_doc: docId,
           items: [],
           totalCantidad: 0,
           totalCostoTotal: 0,
@@ -85,6 +87,7 @@ export default function Home() {
         };
         acc.push(group);
       }
+      
       group.items.push(item);
       group.totalCantidad += item['Cantidad'];
       group.totalCostoTotal += item['Costo Total'];
@@ -231,7 +234,7 @@ export default function Home() {
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
-                              <TableRow key={`${item['Documento material']}-${itemIndex}`}>
+                              <TableRow key={itemIndex}>
                                 <TableCell>{item['Documento material']}</TableCell>
                                 <TableCell>{item['Factura']}</TableCell>
                                 <TableCell>{item['Nº doc.']}</TableCell>
