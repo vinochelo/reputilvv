@@ -27,4 +27,5 @@ export type GroupedData = {
   totalCostoTotal: number;
   totalPrecioVenta: number;
   totalValorAPagar: number;
+  totalUtilidad: number;
 };

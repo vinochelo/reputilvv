@@ -81,6 +81,7 @@ export default function Home() {
           totalCostoTotal: 0,
           totalPrecioVenta: 0,
           totalValorAPagar: 0,
+          totalUtilidad: 0,
         };
         acc.push(group);
       }
@@ -89,6 +90,7 @@ export default function Home() {
       group.totalCostoTotal += item['Costo Total'];
       group.totalPrecioVenta += item['Precio Venta'];
       group.totalValorAPagar += item['Valor a pagar'];
+      group.totalUtilidad += item['Utilidad %'];
       return acc;
     }, []);
     setProcessedData(grouped);
@@ -259,7 +261,9 @@ export default function Home() {
                               <TableCell className="font-headline text-right font-bold text-lg">
                                 {group.totalPrecioVenta.toFixed(2)}
                               </TableCell>
-                              <TableCell />
+                              <TableCell className="font-headline text-right font-bold text-lg">
+                                {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
+                              </TableCell>
                               <TableCell className="font-headline text-right font-bold text-lg">
                                 {group.totalValorAPagar.toFixed(2)}
                               </TableCell>
