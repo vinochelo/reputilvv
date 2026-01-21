@@ -5,12 +5,14 @@ import { useState, useRef, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, FileX2 } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { ExcelData, GroupedData } from '@/lib/types';
+import { generateGreeting } from '@/ai/flows/exampleFlow';
 
 export default function Home() {
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
@@ -20,6 +22,36 @@ export default function Home() {
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [aiGreeting, setAiGreeting] = useState<string>('');
+  const [aiName, setAiName] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateGreeting = async () => {
+    if (!aiName) {
+      toast({
+        title: 'Nombre requerido',
+        description: 'Por favor, introduce un nombre para generar el saludo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsGenerating(true);
+    setAiGreeting('');
+    try {
+      const result = await generateGreeting({ name: aiName });
+      setAiGreeting(result.greeting);
+    } catch (error) {
+      console.error('Error generating greeting:', error);
+      toast({
+        title: 'Error de la IA',
+        description: 'No se pudo generar el saludo. ¿Has configurado tu clave API?',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
@@ -224,6 +256,38 @@ export default function Home() {
           Sube tu archivo de Excel para generar un reporte de utilidad de venta en verde en PDF listo para imprimir.
         </p>
       </div>
+
+      <Card className="max-w-xl mx-auto shadow-lg mb-8">
+        <CardHeader>
+            <CardTitle>Prueba de Conexión con IA</CardTitle>
+            <CardDescription>
+                Introduce un nombre para que la IA genere un saludo. Esto confirma que tu clave API está funcionando.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="flex space-x-2">
+                <Input 
+                    placeholder="Escribe un nombre..."
+                    value={aiName}
+                    onChange={(e) => setAiName(e.target.value)}
+                    disabled={isGenerating}
+                />
+                <Button onClick={handleGenerateGreeting} disabled={isGenerating}>
+                    {isGenerating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                    )}
+                    Generar
+                </Button>
+            </div>
+            {aiGreeting && (
+                <div className="p-4 bg-muted rounded-md">
+                    <p className="text-muted-foreground">{aiGreeting}</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
 
       {!processedData ? (
         <Card className="max-w-xl mx-auto shadow-lg border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
