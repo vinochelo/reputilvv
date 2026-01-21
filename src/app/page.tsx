@@ -164,7 +164,7 @@ export default function Home() {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
-            const canvas = await html2canvas(reportElement, { scale: 2, quality: 0.2 }); 
+            const canvas = await html2canvas(reportElement, { scale: 1, logging: false }); 
             const imgData = canvas.toDataURL('image/jpeg', 0.2); 
             
             if (i > 0) {
@@ -370,5 +370,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
