@@ -240,66 +240,66 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[6px]">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm">
                       <header className="mb-4">
-                          <h2 className="font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="mt-1">
+                          <h2 className="font-bold text-lg">Reporte utilidad venta en verde</h2>
+                          <div className="mt-1 text-base">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                           </div>
                       </header>
-                      <Table>
+                      <Table className="text-[9px]">
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="px-1 py-1 h-auto">Documento material</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Factura</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Nº doc.</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Fecha Factura</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Proveedor</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Nombre del proveedor</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Material</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Texto breve de material</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Cantidad</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Costo Total</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Precio Venta</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Utilidad %</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Valor a pagar</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Documento material</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Factura</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Nº doc.</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Fecha Factura</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Proveedor</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Nombre del proveedor</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Material</TableHead>
+                              <TableHead className="px-1 py-0 h-auto">Texto breve de material</TableHead>
+                              <TableHead className="text-right px-1 py-0 h-auto">Cantidad</TableHead>
+                              <TableHead className="text-right px-1 py-0 h-auto">Costo Total</TableHead>
+                              <TableHead className="text-right px-1 py-0 h-auto">Precio Venta</TableHead>
+                              <TableHead className="text-right px-1 py-0 h-auto">Utilidad %</TableHead>
+                              <TableHead className="text-right px-1 py-0 h-auto">Valor a pagar</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                           {group.items.map((item, itemIndex) => (
                               <TableRow key={itemIndex}>
-                                <TableCell className="px-1 py-1">{item['Documento material']}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Factura']}</TableCell>
-                                <TableCell className="px-1 py-1">{getDocId(item)}</TableCell>
-                                <TableCell className="px-1 py-1">{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Proveedor']}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Nombre del proveedor']}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Material']}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Texto breve de material']}</TableCell>
-                                <TableCell className="text-right px-1 py-1">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
-                                <TableCell className="text-right px-1 py-1">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right px-1 py-1">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right px-1 py-1">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
-                                <TableCell className="text-right px-1 py-1">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Documento material']}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Factura']}</TableCell>
+                                <TableCell className="px-1 py-0">{getDocId(item)}</TableCell>
+                                <TableCell className="px-1 py-0">{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Proveedor']}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Nombre del proveedor']}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Material']}</TableCell>
+                                <TableCell className="px-1 py-0">{item['Texto breve de material']}</TableCell>
+                                <TableCell className="text-right px-1 py-0">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                                <TableCell className="text-right px-1 py-0">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-0">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-0">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                                <TableCell className="text-right px-1 py-0">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                               </TableRow>
                           ))}
                           </TableBody>
                           <TableFooter>
-                            <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={8} className="text-right font-bold px-1 py-1">Total</TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
+                            <TableRow className="bg-accent/30 hover:bg-accent/40 font-bold">
+                              <TableCell colSpan={8} className="text-right px-1 py-0">Total</TableCell>
+                              <TableCell className="text-right font-bold px-1 py-0">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-0">
                                 {group.totalCostoTotal.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-0">
                                 {group.totalPrecioVenta.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-0">
                                 {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                               </TableCell>
-                              <TableCell className="text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-0">
                                 {group.totalValorAPagar.toFixed(2)}
                               </TableCell>
                             </TableRow>
