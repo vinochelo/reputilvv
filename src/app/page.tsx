@@ -242,27 +242,27 @@ export default function Home() {
                 {processedData.map((group, index) => (
                     <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[6px]">
                       <header className="mb-4">
-                          <h2 className="font-headline text-base font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="text-[8px] mt-1">
+                          <h2 className="font-bold">Reporte utilidad venta en verde</h2>
+                          <div className="mt-1">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                           </div>
                       </header>
                       <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Documento material</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Factura</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Nº doc.</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Fecha Factura</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Proveedor</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Nombre del proveedor</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Material</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Texto breve de material</TableHead>
-                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Cantidad</TableHead>
-                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Costo Total</TableHead>
-                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Precio Venta</TableHead>
-                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Utilidad %</TableHead>
-                              <TableHead className="font-headline text-right px-1 py-1 h-auto">Valor a pagar</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Documento material</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Factura</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Nº doc.</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Fecha Factura</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Proveedor</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Nombre del proveedor</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Material</TableHead>
+                              <TableHead className="px-1 py-1 h-auto">Texto breve de material</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto">Cantidad</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto">Costo Total</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto">Precio Venta</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto">Utilidad %</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto">Valor a pagar</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -286,20 +286,20 @@ export default function Home() {
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={8} className="font-headline text-right font-bold px-1 py-1">Total</TableCell>
-                              <TableCell className="font-headline text-right font-bold px-1 py-1">
+                              <TableCell colSpan={8} className="text-right font-bold px-1 py-1">Total</TableCell>
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalCostoTotal.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalPrecioVenta.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold px-1 py-1">
+                              <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalValorAPagar.toFixed(2)}
                               </TableCell>
                             </TableRow>
