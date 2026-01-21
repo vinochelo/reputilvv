@@ -22,13 +22,11 @@ export default function Home() {
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
-    // This regex looks for variations of "Nº doc."
     const docIdRegex = /n(º|°|ro)?\.?\s*doc/i;
     const docIdKey = keys.find(key => docIdRegex.test(key.trim()));
     
     if (docIdKey) {
         const value = item[docIdKey];
-        // Ensure we return the value even if it's 0, but not if it's null or undefined.
         if (value !== null && value !== undefined) {
             return value;
         }
@@ -180,10 +178,10 @@ export default function Home() {
     <main className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-headline font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-6xl">
-          Conversor de Excel a PDF
+          Reportes de utilidad venta en verde
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Sube tu archivo de Excel para generar un reporte en PDF listo para imprimir.
+          Sube tu archivo de Excel para generar un reporte de utilidad de venta en verde en PDF listo para imprimir.
         </p>
       </div>
 

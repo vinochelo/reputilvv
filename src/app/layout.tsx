@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Conversor de Excel a PDF',
-  description: 'Sube un archivo de Excel y conviértelo en un informe PDF imprimible.',
+  title: 'Reportes de utilidad venta en verde',
+  description: 'Genera reportes de utilidad de venta en verde a partir de un archivo Excel.',
 };
 
 export default function RootLayout({
