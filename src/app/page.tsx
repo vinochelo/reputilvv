@@ -367,6 +367,41 @@ export default function Home() {
           </Card>
         </div>
       )}
+
+      <section className="mt-16 max-w-4xl mx-auto">
+        <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
+          ¿Cómo funciona?
+        </h3>
+        <div className="grid md:grid-cols-3 gap-8 text-center">
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+              <span className="text-2xl font-bold">1</span>
+            </div>
+            <h4 className="text-xl font-semibold text-foreground">Sube tu Archivo</h4>
+            <p className="text-foreground/80">
+              Arrastra o selecciona tu archivo de Excel (.xlsx o .xls) con los datos de la venta en verde.
+            </p>
+          </div>
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+              <span className="text-2xl font-bold">2</span>
+            </div>
+            <h4 className="text-xl font-semibold text-foreground">Previsualiza el Reporte</h4>
+            <p className="text-foreground/80">
+              La aplicación agrupará los datos y te mostrará una vista previa de cómo se verá cada reporte en el PDF.
+            </p>
+          </div>
+          <div className="flex flex-col items-center space-y-2">
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
+              <span className="text-2xl font-bold">3</span>
+            </div>
+            <h4 className="text-xl font-semibold text-foreground">Descarga el PDF</h4>
+            <p className="text-foreground/80">
+              Haz clic en "Descargar PDF" para obtener un archivo listo para imprimir con todos los reportes, cada uno en su propia página.
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
