@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
-import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Textarea } from '@/components/ui/textarea';
+import { extractRetenciones } from '@/ai/flows/extract-retenciones-flow';
 
 export default function ControlRetencionesPage() {
   const [processedContent, setProcessedContent] = useState<string | null>(null);
@@ -20,10 +20,10 @@ export default function ControlRetencionesPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' && file.type !== 'application/vnd.ms-excel') {
+    if (file.type !== 'application/pdf') {
       toast({
         title: "Error de archivo",
-        description: "Por favor, sube un archivo de Excel (.xlsx o .xls).",
+        description: "Por favor, sube un archivo PDF.",
         variant: "destructive",
       });
       return;
@@ -34,78 +34,21 @@ export default function ControlRetencionesPage() {
     setProcessedContent(null);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
-
-        if (jsonData.length === 0) {
-            toast({
-                title: "Archivo vacío",
-                description: "El archivo de Excel no contiene datos.",
-                variant: "destructive",
-            });
-            resetState();
-            return;
+        const dataUri = e.target?.result as string;
+        if (!dataUri) {
+          throw new Error("No se pudo leer el archivo.");
         }
         
-        const requiredColumns = ['RUC', 'COMPROBANTE', 'COD. COMP.', 'Nro. Autorizacion', 'BASE IMPONIBLE', 'FECHA EMISION'];
-        const firstRow = jsonData[0];
-        const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+        const result = await extractRetenciones(dataUri);
+        setProcessedContent(result);
 
-        if (missingColumns.length > 0) {
-            toast({
-                title: "Columnas faltantes",
-                description: `El archivo no tiene las siguientes columnas requeridas: ${missingColumns.join(', ')}`,
-                variant: "destructive",
-            });
-            resetState();
-            return;
-        }
-
-        let processed = '';
-        jsonData.forEach((row) => {
-          const ruc = String(row.RUC).padStart(13, '0');
-          
-          // Replicating the logic from the original repository
-          const comprobante = String(row.COMPROBANTE).padStart(9, '0');
-          const serie = comprobante.slice(0, 7);
-
-          const tipoComp = String(row['COD. COMP.']).padStart(2, '0');
-          const autorizacion = row['Nro. Autorizacion'];
-          const baseImponible = parseFloat(row['BASE IMPONIBLE']).toFixed(2);
-          
-          const excelDate = row['FECHA EMISION'];
-          const jsDate = new Date((excelDate - (25567 + 2)) * 86400 * 1000);
-          
-          const day = String(jsDate.getDate()).padStart(2, '0');
-          const month = String(jsDate.getMonth() + 1).padStart(2, '0');
-          const year = jsDate.getFullYear();
-          const formattedDate = `${day}${month}${year}`;
-          
-          processed += `01|${formattedDate}|03|${ruc}|${tipoComp}|${serie}|${comprobante}|${autorizacion}|${baseImponible}|0|0|0\r\n`;
-        });
-
-        if (!processed) {
-            toast({
-                title: "No se procesaron datos",
-                description: "No se encontraron filas válidas en el archivo.",
-                variant: "destructive",
-            });
-            resetState();
-            return;
-        }
-
-        setProcessedContent(processed);
-
-      } catch (error) {
-        console.error("Error processing Excel file:", error);
+      } catch (error: any) {
+        console.error("Error processing PDF file:", error);
         toast({
-          title: "Error al procesar el archivo",
-          description: "No se pudo leer el archivo. Asegúrate de que el formato y las columnas sean correctas.",
+          title: "Error al procesar el archivo con IA",
+          description: error.message || "No se pudo extraer la información del PDF. Intenta con otro archivo.",
           variant: "destructive",
         });
         resetState();
@@ -122,7 +65,7 @@ export default function ControlRetencionesPage() {
       });
       resetState();
     }
-    reader.readAsBinaryString(file);
+    reader.readAsDataURL(file);
   };
   
   const handleDownload = () => {
@@ -163,10 +106,10 @@ export default function ControlRetencionesPage() {
 
       <div className="text-center mb-12">
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Extractor de Retenciones
+          Extractor de Retenciones (PDF)
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Sube un archivo de Excel para generar un archivo de texto (.txt) compatible con la importación en DIMM.
+          Sube un archivo de retenciones en PDF para que la IA extraiga los datos y genere un archivo .txt compatible con DIMM.
         </p>
       </div>
 
@@ -176,22 +119,24 @@ export default function ControlRetencionesPage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center space-y-4 text-center">
                   <Loader2 className="w-16 h-16 text-primary animate-spin" />
-                  <p className="text-lg font-semibold text-foreground">Procesando archivo...</p>
+                  <p className="text-lg font-semibold text-foreground">La IA está procesando tu PDF...</p>
+                  <p className="text-sm text-muted-foreground">Esto puede tardar unos segundos.</p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center space-y-4 text-center">
                 <UploadCloud className="w-16 h-16 text-primary" />
-                <p className="text-lg font-semibold text-foreground">Arrastra y suelta tu archivo de Excel aquí</p>
+                <p className="text-lg font-semibold text-foreground">Arrastra y suelta tu archivo PDF aquí</p>
                 <p className="text-muted-foreground">o</p>
                 <Button onClick={() => fileInputRef.current?.click()}>
-                  Seleccionar Archivo
+                  <BrainCircuit className="mr-2 h-4 w-4" />
+                  Seleccionar PDF
                 </Button>
                 <input
                   ref={fileInputRef}
                   type="file"
                   className="hidden"
                   onChange={handleFileChange}
-                  accept=".xlsx, .xls"
+                  accept="application/pdf"
                 />
               </div>
             )}
@@ -207,7 +152,7 @@ export default function ControlRetencionesPage() {
               <div className="flex gap-2">
                   <Button variant="outline" onClick={resetState}>
                     <FileX2 className="mr-2 h-4 w-4" />
-                    Cargar Otro
+                    Procesar Otro
                   </Button>
                   <Button onClick={handleDownload}>
                     <FileDown className="mr-2 h-4 w-4" />
