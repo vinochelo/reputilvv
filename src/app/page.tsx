@@ -13,7 +13,7 @@ const tools = [
   },
   {
     title: 'Reportes de Retail',
-    description: 'Próximamente: Analiza y visualiza datos de ventas de retail.',
+    description: 'Analiza y visualiza datos de ventas de retail.',
     href: '/reporte-retail',
     icon: Building,
   },
@@ -52,7 +52,7 @@ export default function Home() {
             target={tool.href.startsWith('http') ? '_blank' : undefined}
             rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
           >
-            <Card className="h-full hover:border-primary transition-all duration-300 hover:shadow-lg">
+            <Card className="h-full hover:border-primary transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
               <CardHeader className="flex flex-row items-center gap-4">
                 <div className="bg-primary/10 p-3 rounded-full">
                   <tool.icon className="w-6 h-6 text-primary" />
