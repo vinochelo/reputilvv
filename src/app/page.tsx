@@ -240,10 +240,10 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-xs">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[9px]">
                       <header className="mb-4">
                           <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="text-sm mt-2">
+                          <div className="text-xs mt-2">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                           </div>
                       </header>
@@ -288,20 +288,20 @@ export default function Home() {
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={9} className="font-headline text-right font-bold text-sm px-1 py-1">Total</TableCell>
-                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
+                              <TableCell colSpan={9} className="font-headline text-right font-bold px-1 py-1">Total</TableCell>
+                              <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
+                              <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.totalCostoTotal.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
+                              <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.totalPrecioVenta.toFixed(2)}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
+                              <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                               </TableCell>
-                              <TableCell className="font-headline text-right font-bold text-sm px-1 py-1">
+                              <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.totalValorAPagar.toFixed(2)}
                               </TableCell>
                             </TableRow>
