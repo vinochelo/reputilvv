@@ -193,7 +193,7 @@ export default function Home() {
   return (
     <main className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
-        <h2 className="text-2xl font-bold text-primary tracking-widest mb-2">ETAFASHION RM</h2>
+        <h2 className="text-5xl lg:text-7xl font-bold text-primary tracking-widest mb-2">ETAFASHION RM</h2>
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Reportes de utilidad venta en verde
         </h1>
@@ -255,11 +255,11 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black text-[8px]">
                       <header className="mb-2">
                           <h2 className="font-bold text-primary text-base">Reporte utilidad venta en verde</h2>
                       </header>
-                      <Table className="border-collapse text-[9px]">
+                      <Table className="border-collapse">
                           <TableHeader>
                             <TableRow className="bg-primary/20 hover:bg-primary/20">
                               <TableHead className="px-1 py-1 h-auto text-black font-bold border border-gray-300">Doc.mat.</TableHead>
