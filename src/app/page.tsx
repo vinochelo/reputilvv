@@ -161,9 +161,8 @@ export default function Home() {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
-            // Lower scale and use JPEG for better performance and smaller file size
             const canvas = await html2canvas(reportElement, { scale: 2 }); 
-            const imgData = canvas.toDataURL('image/jpeg', 0.8); 
+            const imgData = canvas.toDataURL('image/jpeg', 0.5); 
             
             if (i > 0) {
               pdf.addPage();
