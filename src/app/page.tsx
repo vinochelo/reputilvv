@@ -26,7 +26,13 @@ const tools = [
   {
     title: 'Control de retenciones',
     description: 'Gestiona y controla las retenciones fiscales.',
-    href: '/control-retenciones',
+    href: 'https://extractor-kohl.vercel.app/',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Control de retenciones (Beta)',
+    description: 'Nueva versión en desarrollo para gestionar retenciones con IA.',
+    href: '/control-retenciones-beta',
     icon: ShieldCheck,
   },
 ];
