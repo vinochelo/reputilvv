@@ -148,7 +148,7 @@ export default function Home() {
           pdf.addPage();
         }
         try {
-            const canvas = await html2canvas(reportElement, { scale: 2 });
+            const canvas = await html2canvas(reportElement, { scale: 3 }); // Increased scale for better quality
             const imgData = canvas.toDataURL('image/png');
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -240,10 +240,10 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[7px]">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[6px]">
                       <header className="mb-4">
-                          <h2 className="font-headline text-lg font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="text-[10px] mt-1">
+                          <h2 className="font-headline text-base font-bold">Reporte utilidad venta en verde</h2>
+                          <div className="text-[8px] mt-1">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                           </div>
                       </header>
@@ -253,7 +253,6 @@ export default function Home() {
                               <TableHead className="font-headline px-1 py-1 h-auto">Documento material</TableHead>
                               <TableHead className="font-headline px-1 py-1 h-auto">Factura</TableHead>
                               <TableHead className="font-headline px-1 py-1 h-auto">Nº doc.</TableHead>
-                              <TableHead className="font-headline px-1 py-1 h-auto">Centro</TableHead>
                               <TableHead className="font-headline px-1 py-1 h-auto">Fecha Factura</TableHead>
                               <TableHead className="font-headline px-1 py-1 h-auto">Proveedor</TableHead>
                               <TableHead className="font-headline px-1 py-1 h-auto">Nombre del proveedor</TableHead>
@@ -272,7 +271,6 @@ export default function Home() {
                                 <TableCell className="px-1 py-1">{item['Documento material']}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Factura']}</TableCell>
                                 <TableCell className="px-1 py-1">{getDocId(item)}</TableCell>
-                                <TableCell className="px-1 py-1">{item['Centro']}</TableCell>
                                 <TableCell className="px-1 py-1">{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Proveedor']}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Nombre del proveedor']}</TableCell>
@@ -288,7 +286,7 @@ export default function Home() {
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40">
-                              <TableCell colSpan={9} className="font-headline text-right font-bold px-1 py-1">Total</TableCell>
+                              <TableCell colSpan={8} className="font-headline text-right font-bold px-1 py-1">Total</TableCell>
                               <TableCell className="font-headline text-right font-bold px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
