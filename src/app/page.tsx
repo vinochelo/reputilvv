@@ -19,14 +19,14 @@ const tools = [
   },
   {
     title: 'Envío correos en masa',
-    description: 'Próximamente: Envía correos personalizados a una lista de contactos.',
-    href: '/envio-correos',
+    description: 'Envía correos personalizados a una lista de contactos.',
+    href: 'https://correos-sigma.vercel.app/',
     icon: Mail,
   },
   {
     title: 'Control de retenciones',
-    description: 'Próximamente: Gestiona y controla las retenciones fiscales.',
-    href: '/control-retenciones',
+    description: 'Gestiona y controla las retenciones fiscales.',
+    href: 'https://extractor-kohl.vercel.app/',
     icon: ShieldCheck,
   },
 ];
@@ -45,7 +45,13 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {tools.map((tool) => (
-          <Link href={tool.href} key={tool.title} className="block group">
+          <Link 
+            href={tool.href} 
+            key={tool.title} 
+            className="block group"
+            target={tool.href.startsWith('http') ? '_blank' : undefined}
+            rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+          >
             <Card className="h-full hover:border-primary transition-all duration-300 hover:shadow-lg">
               <CardHeader className="flex flex-row items-center gap-4">
                 <div className="bg-primary/10 p-3 rounded-full">
