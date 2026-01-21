@@ -286,7 +286,7 @@ export default function Home() {
                           </TableBody>
                           <TableFooter>
                             <TableRow className="bg-accent/30 hover:bg-accent/40 font-bold">
-                              <TableCell colSpan={7} className="text-right px-1 py-1">Total</TableCell>
+                              <TableCell colSpan={8} className="text-right px-1 py-1">Total</TableCell>
                               <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
