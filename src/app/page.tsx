@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { FileText, Building, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 
@@ -35,6 +36,15 @@ export default function Home() {
   return (
     <main className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
+        <div className="flex justify-center mb-4">
+            <Image
+                src="/logo-rm-etafashion.png"
+                alt="ETAFASHION RM Logo"
+                width={250}
+                height={125}
+                priority
+            />
+        </div>
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Portal de Herramientas
         </h1>

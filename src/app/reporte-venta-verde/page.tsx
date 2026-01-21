@@ -13,7 +13,6 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import type { ExcelData, GroupedData } from '@/lib/types';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function ReporteVentaVerdePage() {
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
@@ -236,15 +235,6 @@ export default function ReporteVentaVerdePage() {
       </div>
 
       <div className="text-center mb-12">
-        <div className="flex justify-center mb-4">
-            <Image
-                src="/logo-rm-etafashion.png"
-                alt="ETAFASHION RM Logo"
-                width={250}
-                height={125}
-                priority
-            />
-        </div>
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Reportes de utilidad venta en verde
         </h1>
