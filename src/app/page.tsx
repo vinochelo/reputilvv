@@ -5,53 +5,23 @@ import { useState, useRef, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, FileX2, Sparkles } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import type { ExcelData, GroupedData } from '@/lib/types';
-import { generateGreeting } from '@/ai/flows/exampleFlow';
 
 export default function Home() {
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [aiGreeting, setAiGreeting] = useState<string>('');
-  const [aiName, setAiName] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleGenerateGreeting = async () => {
-    if (!aiName) {
-      toast({
-        title: 'Nombre requerido',
-        description: 'Por favor, introduce un nombre para generar el saludo.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsGenerating(true);
-    setAiGreeting('');
-    try {
-      const result = await generateGreeting({ name: aiName });
-      setAiGreeting(result.greeting);
-    } catch (error) {
-      console.error('Error generating greeting:', error);
-      toast({
-        title: 'Error de la IA',
-        description: 'No se pudo generar el saludo. ¿Has configurado tu clave API?',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
@@ -182,6 +152,7 @@ export default function Home() {
     if (!pdfContentRef.current) return;
 
     setLoading(true);
+    setProgress(0);
     await new Promise(resolve => setTimeout(resolve, 0));
     
     const pdf = new jsPDF('l', 'mm', 'a4');
@@ -193,7 +164,7 @@ export default function Home() {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
-            const canvas = await html2canvas(reportElement, { scale: 2 }); 
+            const canvas = await html2canvas(reportElement, { scale: 2, quality: 0.5 }); 
             const imgData = canvas.toDataURL('image/jpeg', 0.5); 
             
             if (i > 0) {
@@ -204,6 +175,7 @@ export default function Home() {
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
             pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
             successfulPages++;
+            setProgress(((i + 1) / reportElements.length) * 100);
         } catch(e) {
             console.error("Error processing page for PDF:", e);
             toast({
@@ -234,6 +206,7 @@ export default function Home() {
         });
     } finally {
         setLoading(false);
+        setProgress(0);
     }
   };
   
@@ -256,38 +229,6 @@ export default function Home() {
           Sube tu archivo de Excel para generar un reporte de utilidad de venta en verde en PDF listo para imprimir.
         </p>
       </div>
-
-      <Card className="max-w-xl mx-auto shadow-lg mb-8">
-        <CardHeader>
-            <CardTitle>Prueba de Conexión con IA</CardTitle>
-            <CardDescription>
-                Introduce un nombre para que la IA genere un saludo. Esto confirma que tu clave API está funcionando.
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-            <div className="flex space-x-2">
-                <Input 
-                    placeholder="Escribe un nombre..."
-                    value={aiName}
-                    onChange={(e) => setAiName(e.target.value)}
-                    disabled={isGenerating}
-                />
-                <Button onClick={handleGenerateGreeting} disabled={isGenerating}>
-                    {isGenerating ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                    )}
-                    Generar
-                </Button>
-            </div>
-            {aiGreeting && (
-                <div className="p-4 bg-muted rounded-md">
-                    <p className="text-muted-foreground">{aiGreeting}</p>
-                </div>
-            )}
-        </CardContent>
-      </Card>
 
       {!processedData ? (
         <Card className="max-w-xl mx-auto shadow-lg border-2 border-dashed border-primary/50 hover:border-primary transition-colors">
@@ -325,7 +266,7 @@ export default function Home() {
                     <CardDescription>Archivo: {fileName}</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={resetState}>
+                    <Button variant="outline" onClick={resetState} disabled={loading}>
                       <FileX2 className="mr-2 h-4 w-4" />
                       Cargar Otro
                     </Button>
@@ -340,6 +281,14 @@ export default function Home() {
                 </div>
             </CardHeader>
             <CardContent>
+                {loading && (
+                    <div className="space-y-2 mb-4">
+                        <Progress value={progress} />
+                        <p className="text-sm text-center text-muted-foreground">
+                            Generando PDF... {Math.round(progress)}%
+                        </p>
+                    </div>
+                )}
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group) => (
                     <div key={group.n_doc} className="p-4 bg-white text-black">
