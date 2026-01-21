@@ -36,7 +36,7 @@ export default function Home() {
     <main className="container mx-auto px-4 py-16 sm:py-24">
       <div className="text-center mb-16">
         <div className="flex justify-center items-start gap-1 mb-8" aria-label="ETAFASHION RM">
-          <span className="font-headline font-bold text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
+          <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
             ETAFASHION
           </span>
           <span className="font-headline font-bold text-destructive text-2xl sm:text-3xl md:text-4xl pt-1">
