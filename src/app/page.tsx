@@ -240,10 +240,10 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[9px]">
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm text-[7px]">
                       <header className="mb-4">
-                          <h2 className="font-headline text-xl font-bold">Reporte utilidad venta en verde</h2>
-                          <div className="text-xs mt-2">
+                          <h2 className="font-headline text-lg font-bold">Reporte utilidad venta en verde</h2>
+                          <div className="text-[10px] mt-1">
                               <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
                           </div>
                       </header>
