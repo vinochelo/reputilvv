@@ -5,8 +5,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Reportes de utilidad venta en verde',
-  description: 'Genera reportes de utilidad de venta en verde a partir de un archivo Excel.',
+  title: 'Herramientas de Trabajo',
+  description: 'Un portal para centralizar herramientas de productividad.',
 };
 
 export default function RootLayout({
