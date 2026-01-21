@@ -22,13 +22,13 @@ export default function Home() {
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
-    const docIdRegex = /n(º|°|ro)?\.?\s*doc/i;
-    const docIdKey = keys.find(key => docIdRegex.test(key.trim()));
-    
-    if (docIdKey) {
-        const value = item[docIdKey];
-        if (value !== null && value !== undefined) {
-            return value;
+    const docIdRegex = /n(º|°|ro\.?|umero)?\.?\s*doc/i;
+    for (const key of keys) {
+        if (docIdRegex.test(key.trim())) {
+            const value = item[key];
+            if (value !== null && value !== undefined) {
+                return value;
+            }
         }
     }
     return undefined;
@@ -107,12 +107,27 @@ export default function Home() {
         acc.push(group);
       }
       
-      group.items.push(item);
-      group.totalCantidad += Number(item['Cantidad'] ?? 0);
-      group.totalCostoTotal += Number(item['Costo Total'] ?? 0);
-      group.totalPrecioVenta += Number(item['Precio Venta'] ?? 0);
-      group.totalValorAPagar += Number(item['Valor a pagar'] ?? 0);
-      group.totalUtilidad += Number(item['Utilidad %'] ?? 0);
+      const cantidad = Number(item['Cantidad'] ?? 0);
+      const costoTotal = Number(item['Costo Total'] ?? 0);
+      const precioVenta = Number(item['Precio Venta'] ?? 0);
+      const utilidad = Number(item['Utilidad %'] ?? 0);
+      const valorAPagar = Number(item['Valor a pagar'] ?? 0);
+      
+      group.items.push({
+          ...item,
+          'Cantidad': cantidad,
+          'Costo Total': costoTotal,
+          'Precio Venta': precioVenta,
+          'Utilidad %': utilidad,
+          'Valor a pagar': valorAPagar,
+      });
+
+      group.totalCantidad += cantidad;
+      group.totalCostoTotal += costoTotal;
+      group.totalPrecioVenta += precioVenta;
+      group.totalUtilidad += utilidad;
+      group.totalValorAPagar += valorAPagar;
+
       return acc;
     }, []);
 
@@ -123,6 +138,7 @@ export default function Home() {
         description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº doc.' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
         variant: "destructive",
       });
+      setProcessedData(null);
       return;
     }
 
@@ -177,6 +193,7 @@ export default function Home() {
   return (
     <main className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
+        <h2 className="text-2xl font-bold text-primary tracking-widest mb-2">ETAFASHION RM</h2>
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Reportes de utilidad venta en verde
         </h1>
@@ -242,7 +259,7 @@ export default function Home() {
                       <header className="mb-2">
                           <h2 className="font-bold text-primary text-base">Reporte utilidad venta en verde</h2>
                       </header>
-                      <Table className="border-collapse text-[8px]">
+                      <Table className="border-collapse text-[9px]">
                           <TableHeader>
                             <TableRow className="bg-primary/20 hover:bg-primary/20">
                               <TableHead className="px-1 py-1 h-auto text-black font-bold border border-gray-300">Doc.mat.</TableHead>
