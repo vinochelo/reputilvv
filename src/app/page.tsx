@@ -38,11 +38,12 @@ export default function Home() {
       <div className="text-center mb-12">
         <div className="flex justify-center mb-4">
             <Image
-                src="/logo-rm-etafashion.png"
-                alt="ETAFASHION RM Logo"
+                src="https://picsum.photos/seed/etafashion/250/141"
+                alt="ETAFASHION RM Logo Placeholder"
                 width={250}
                 height={141}
                 priority
+                className="rounded-md"
             />
         </div>
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
