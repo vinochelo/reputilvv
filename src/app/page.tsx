@@ -153,7 +153,7 @@ export default function Home() {
 
     setLoading(true);
     setProgress(0);
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise(resolve => setTimeout(resolve, 50));
     
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -176,6 +176,8 @@ export default function Home() {
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
             successfulPages++;
             setProgress(((i + 1) / reportElements.length) * 100);
+            // Yield to the main thread to keep the UI responsive
+            await new Promise(resolve => setTimeout(resolve, 0));
         } catch(e) {
             console.error("Error processing page for PDF:", e);
             toast({
@@ -189,6 +191,10 @@ export default function Home() {
 
     try {
       if (successfulPages > 0) {
+        toast({
+          title: "Preparando descarga...",
+          description: "El archivo PDF se está compilando y se descargará en breve.",
+        });
         pdf.save('reporte.pdf');
       } else {
         toast({
