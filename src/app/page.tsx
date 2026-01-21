@@ -164,8 +164,8 @@ export default function Home() {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
-            const canvas = await html2canvas(reportElement, { scale: 0.7, logging: false }); 
-            const imgData = canvas.toDataURL('image/jpeg', 0.2); 
+            const canvas = await html2canvas(reportElement, { scale: 2 }); 
+            const imgData = canvas.toDataURL('image/png'); 
             
             if (i > 0) {
               pdf.addPage();
@@ -173,7 +173,7 @@ export default function Home() {
 
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
             successfulPages++;
             setProgress(((i + 1) / reportElements.length) * 100);
         } catch(e) {
