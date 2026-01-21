@@ -238,38 +238,40 @@ export default function Home() {
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
                 {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black border rounded-lg shadow-sm">
-                      <header className="mb-4">
-                          <h2 className="font-bold text-lg">Reporte utilidad venta en verde</h2>
-                          <div className="mt-1 text-base">
-                              <p><span className="font-semibold">N° Doc:</span> {group.n_doc}</p>
-                          </div>
+                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black text-[9px]">
+                      <header className="mb-2">
+                          <h2 className="font-bold text-primary text-base">Reporte utilidad venta en verde ({index + 1})</h2>
                       </header>
-                      <Table className="text-[9px]">
+                      <Table>
                           <TableHeader>
-                            <TableRow>
-                              <TableHead className="px-1 py-1 h-auto">Documento material</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Factura</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Nº doc.</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Fecha Factura</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Proveedor</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Nombre del proveedor</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Material</TableHead>
-                              <TableHead className="px-1 py-1 h-auto">Texto breve de material</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Cantidad</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Costo Total</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Precio Venta</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Utilidad %</TableHead>
-                              <TableHead className="text-right px-1 py-1 h-auto">Valor a pagar</TableHead>
+                            <TableRow className="bg-primary/20 hover:bg-primary/20">
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Doc.mat.</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Factura</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Nº doc.</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Ce.</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Fecha Factura</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Proveedor</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Nombre del proveedor</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Material</TableHead>
+                              <TableHead className="px-1 py-1 h-auto text-black font-bold">Texto breve de material</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto text-black font-bold">Cantidad</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto text-black font-bold">Costo Total</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto text-black font-bold">Precio Venta</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto text-black font-bold">Utilidad %</TableHead>
+                              <TableHead className="text-right px-1 py-1 h-auto text-black font-bold">Valor a pagar</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                          {group.items.map((item, itemIndex) => (
+                          {group.items.map((item, itemIndex) => {
+                              const date = new Date(item['Fecha Factura']);
+                              const formattedDate = Number.isNaN(date.getTime()) ? '' : `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+                              return (
                               <TableRow key={itemIndex}>
                                 <TableCell className="px-1 py-1">{item['Documento material']}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Factura']}</TableCell>
                                 <TableCell className="px-1 py-1">{getDocId(item)}</TableCell>
-                                <TableCell className="px-1 py-1">{new Date(item['Fecha Factura']).toLocaleDateString('es-CL')}</TableCell>
+                                <TableCell className="px-1 py-1">{item['Centro']}</TableCell>
+                                <TableCell className="px-1 py-1">{formattedDate}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Proveedor']}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Nombre del proveedor']}</TableCell>
                                 <TableCell className="px-1 py-1">{item['Material']}</TableCell>
@@ -280,11 +282,13 @@ export default function Home() {
                                 <TableCell className="text-right px-1 py-1">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
                                 <TableCell className="text-right px-1 py-1">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                               </TableRow>
-                          ))}
+                              )
+                          })}
                           </TableBody>
                           <TableFooter>
-                            <TableRow className="bg-accent/30 hover:bg-accent/40 font-bold">
-                              <TableCell colSpan={8} className="text-right px-1 py-1">Total</TableCell>
+                            <TableRow className="bg-accent/30 hover:bg-accent/30 font-bold">
+                              <TableCell className="text-left font-bold px-1 py-1">*</TableCell>
+                              <TableCell colSpan={8} className="px-1 py-1"></TableCell>
                               <TableCell className="text-right font-bold px-1 py-1">
                                 {group.totalCantidad.toFixed(3)}
                               </TableCell>
