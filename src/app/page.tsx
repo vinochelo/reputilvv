@@ -41,7 +41,7 @@ export default function Home() {
                 src="/logo-rm-etafashion.png"
                 alt="ETAFASHION RM Logo"
                 width={250}
-                height={125}
+                height={141}
                 priority
             />
         </div>
