@@ -39,7 +39,7 @@ export default function Home() {
           <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
             ETAFASHION
           </span>
-          <span className="font-headline font-bold text-destructive text-2xl sm:text-3xl md:text-4xl pt-1">
+          <span className="font-headline font-bold text-destructive text-4xl sm:text-5xl md:text-6xl pt-1">
             RM
           </span>
         </div>
