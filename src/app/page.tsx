@@ -1,8 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { FileText, Building, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const tools = [
@@ -34,27 +33,17 @@ const tools = [
 
 export default function Home() {
   return (
-    <main className="container mx-auto px-4 py-12">
-      <div className="text-center mb-12">
-        <div className="flex justify-center mb-4">
-            <Image
-                src="https://picsum.photos/seed/etafashion/250/141"
-                alt="ETAFASHION RM Logo Placeholder"
-                width={250}
-                height={141}
-                priority
-                className="rounded-md"
-            />
-        </div>
-        <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+    <main className="container mx-auto px-4 py-16 sm:py-24">
+      <div className="text-center mb-16">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold tracking-tight text-foreground">
           Portal de Herramientas
         </h1>
-        <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Accede a todas tus aplicaciones de trabajo desde un solo lugar.
+        <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
+          Un espacio centralizado para acceder a todas tus aplicaciones de trabajo y mejorar tu productividad.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {tools.map((tool) => (
           <Link 
             href={tool.href} 
@@ -63,21 +52,18 @@ export default function Home() {
             target={tool.href.startsWith('http') ? '_blank' : undefined}
             rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
           >
-            <Card className="h-full hover:border-primary transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-              <CardHeader className="flex flex-row items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-full">
-                  <tool.icon className="w-6 h-6 text-primary" />
+            <Card className="h-full flex flex-col p-8 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl rounded-2xl border hover:border-primary/50">
+              <div className="flex-grow">
+                <div className="bg-primary/10 p-4 rounded-xl self-start inline-block mb-6">
+                  <tool.icon className="w-8 h-8 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="font-headline text-xl">{tool.title}</CardTitle>
-                  <CardDescription>{tool.description}</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-end items-center text-sm font-semibold text-primary group-hover:translate-x-1 transition-transform">
-                  Ir a la herramienta <ArrowRight className="ml-2 h-4 w-4" />
-                </div>
-              </CardContent>
+                <h2 className="font-headline text-2xl font-semibold">{tool.title}</h2>
+                <p className="mt-2 text-base text-foreground/80">{tool.description}</p>
+              </div>
+              <div className="flex items-center text-sm font-bold text-primary mt-8">
+                Ir a la herramienta
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
+              </div>
             </Card>
           </Link>
         ))}
