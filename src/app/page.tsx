@@ -164,8 +164,8 @@ export default function Home() {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
-            const canvas = await html2canvas(reportElement, { scale: 2, quality: 0.5 }); 
-            const imgData = canvas.toDataURL('image/jpeg', 0.5); 
+            const canvas = await html2canvas(reportElement, { scale: 2, quality: 0.2 }); 
+            const imgData = canvas.toDataURL('image/jpeg', 0.2); 
             
             if (i > 0) {
               pdf.addPage();
@@ -370,3 +370,5 @@ export default function Home() {
     </main>
   );
 }
+
+    
