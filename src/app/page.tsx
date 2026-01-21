@@ -149,37 +149,60 @@ export default function Home() {
     if (!pdfContentRef.current) return;
 
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
+    await new Promise(resolve => setTimeout(resolve, 0));
     
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const reportElements = Array.from(pdfContentRef.current.children);
+    let successfulPages = 0;
     
     for (let i = 0; i < reportElements.length; i++) {
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
-        if (i > 0) {
-          pdf.addPage();
-        }
         try {
-            const canvas = await html2canvas(reportElement, { scale: 3 }); // Increased scale for better quality
-            const imgData = canvas.toDataURL('image/png');
+            // Lower scale and use JPEG for better performance and smaller file size
+            const canvas = await html2canvas(reportElement, { scale: 2 }); 
+            const imgData = canvas.toDataURL('image/jpeg', 0.95); 
+            
+            if (i > 0) {
+              pdf.addPage();
+            }
+
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+            successfulPages++;
         } catch(e) {
-            console.error(e);
+            console.error("Error processing page for PDF:", e);
             toast({
-              title: "Error al generar PDF",
-              description: "No se pudo procesar uno de los reportes para el PDF.",
+              title: "Error al generar página",
+              description: `No se pudo procesar el reporte ${i + 1} para el PDF.`,
               variant: "destructive",
             });
         }
       }
     }
 
-    pdf.save('reporte.pdf');
-    setLoading(false);
+    try {
+      if (successfulPages > 0) {
+        pdf.save('reporte.pdf');
+      } else {
+        toast({
+            title: "No se generó el PDF",
+            description: "No se pudo procesar ningún reporte.",
+            variant: "destructive",
+        });
+      }
+    } catch (e) {
+        console.error("Error saving PDF:", e);
+        toast({
+            title: "Error al guardar el PDF",
+            description: "El documento es demasiado grande y no se pudo generar. Intenta con menos datos.",
+            variant: "destructive",
+        });
+    } finally {
+        setLoading(false);
+    }
   };
   
   const resetState = () => {
@@ -254,8 +277,8 @@ export default function Home() {
             </CardHeader>
             <CardContent>
                 <div id="pdf-content" ref={pdfContentRef} className="space-y-8">
-                {processedData.map((group, index) => (
-                    <div key={`${group.n_doc}-${index}`} className="p-4 bg-white text-black text-[8px]">
+                {processedData.map((group) => (
+                    <div key={group.n_doc} className="p-4 bg-white text-black text-[8px]">
                       <header className="mb-2">
                           <h2 className="font-bold text-primary text-base">Reporte utilidad venta en verde</h2>
                       </header>
