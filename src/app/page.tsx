@@ -26,7 +26,7 @@ const tools = [
   {
     title: 'Control de retenciones',
     description: 'Gestiona y controla las retenciones fiscales.',
-    href: 'https://extractor-kohl.vercel.app/',
+    href: '/control-retenciones',
     icon: ShieldCheck,
   },
 ];
