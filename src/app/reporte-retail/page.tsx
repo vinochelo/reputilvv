@@ -5,14 +5,14 @@ import { ArrowLeft, BrainCircuit, File as FileIcon, FileSpreadsheet, Loader2 } f
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { PDFDocument } from 'pdf-lib';
-import pdf from 'pdf-parse';
+import * as pdfjs from 'pdfjs-dist';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
-// This is required for pdf-parse to work in the browser
-(window as any).pdfjsWorker = import('pdfjs-dist/build/pdf.worker.min.mjs');
+// This is required for pdfjs-dist to work in the browser
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 
 export default function ReporteRetailPage() {
@@ -86,36 +86,26 @@ export default function ReporteRetailPage() {
 
         // 2. Parse PDF and extract order number from each page safely
         const pdfBuffer = await pdfFile.arrayBuffer();
+        const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+        const pdfDocument = await loadingTask.promise;
+        
         const pageInfo: { pageIndex: number; docNumber: number }[] = [];
         const unmappedPages: number[] = [];
         
-        const pagePromises: Promise<{ pageIndex: number; orderNumber: string | null; error?: boolean }>[] = [];
-        
-        await pdf(Buffer.from(pdfBuffer), { 
-            pagerender: (pageData: any) => {
-                if (!pageData || typeof pageData.getTextContent !== 'function') {
-                    // Create a promise that resolves to an error state
-                    const errorPromise = Promise.resolve({ pageIndex: (pageData?.pageNumber ?? 0) -1, orderNumber: null, error: true });
-                    pagePromises.push(errorPromise);
-                    return ""; 
-                }
-        
-                const currentPageIndex = pageData.pageNumber - 1;
-        
-                const pagePromise = pageData.getTextContent().then((textContent: any) => {
-                    const text = (textContent?.items ?? []).map((item: any) => item.str).join(' ');
-                    const orderRegex = /Orden[\s\S]*?(\d{10})/;
-                    const match = text.match(orderRegex);
-                    const orderNumber = match ? match[1] : null;
-                    return { pageIndex: currentPageIndex, orderNumber };
-                }).catch(() => {
-                    return { pageIndex: currentPageIndex, orderNumber: null, error: true };
-                });
-        
-                pagePromises.push(pagePromise);
-                return ""; // Return value is not used by pdf-parse
-            }
-        });
+        const pagePromises = [];
+        for (let i = 0; i < pdfDocument.numPages; i++) {
+            const pagePromise = pdfDocument.getPage(i + 1).then(async (page) => {
+                const textContent = await page.getTextContent();
+                const text = textContent.items.map((item: any) => item.str).join(' ');
+                const orderRegex = /Orden[\s\S]*?(\d{10})/;
+                const match = text.match(orderRegex);
+                const orderNumber = match ? match[1] : null;
+                return { pageIndex: i, orderNumber };
+            }).catch(() => {
+                return { pageIndex: i, orderNumber: null, error: true };
+            });
+            pagePromises.push(pagePromise);
+        }
     
         const extractedData = await Promise.all(pagePromises);
 
