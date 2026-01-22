@@ -78,7 +78,7 @@ const sortRetailPdfFlow = ai.defineFlow(
 
         const pagePromise = pageData.getTextContent().then((textContent: any) => {
             const text = (textContent?.items ?? []).map((item: any) => item.str).join(' ');
-            const orderRegex = /Orden\s*([0-9]{8,})/;
+            const orderRegex = /Orden[\s\S]*?([0-9]{10})/;
             const match = text.match(orderRegex);
             const orderNumber = match ? match[1] : null;
 
@@ -113,7 +113,7 @@ const sortRetailPdfFlow = ai.defineFlow(
     }
     
     if (pageInfo.length === 0) {
-        throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' seguida de un número y que el Excel sea correcto.");
+        throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' y que los números de orden de 10 dígitos coincidan con los del archivo Excel.");
     }
 
     // 3. Sort pages based on document number
