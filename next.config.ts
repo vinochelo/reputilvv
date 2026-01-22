@@ -33,6 +33,10 @@ const nextConfig: NextConfig = {
   serverActions: {
     bodySizeLimit: '20mb',
   },
+  webpack: (config) => {
+    config.resolve.fallback = { fs: false };
+    return config;
+  },
 };
 
 export default nextConfig;
