@@ -52,7 +52,6 @@ export default function ReporteRetailPage() {
     setLoading(true);
     
     try {
-        // 1. Parse Excel to create order -> document number map
         const excelBuffer = await excelFile.arrayBuffer();
         const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
@@ -95,7 +94,6 @@ export default function ReporteRetailPage() {
             return;
         }
 
-        // 2. Parse PDF and extract order number from each page safely
         const pdfBufferForPdfjs = await pdfFile.arrayBuffer();
         const loadingTask = pdfjs.getDocument({ data: pdfBufferForPdfjs });
         const pdfDocument = await loadingTask.promise;
@@ -109,16 +107,16 @@ export default function ReporteRetailPage() {
                 try {
                     const textContent = await page.getTextContent();
                     const text = textContent.items.map((item: any) => item.str).join('');
-                    
-                    const potentialOrderNumbers = text.match(/\d{10}/g) || [];
+                    const allDigits = text.replace(/\D/g, '');
                     let foundOrderNumber: string | null = null;
 
-                    for (const num of potentialOrderNumbers) {
-                      if (orderToDocMap.has(num)) {
-                        foundOrderNumber = num;
-                        break;
-                      }
+                    for (const orderNumberFromExcel of orderToDocMap.keys()) {
+                        if (allDigits.includes(orderNumberFromExcel)) {
+                            foundOrderNumber = orderNumberFromExcel;
+                            break;
+                        }
                     }
+                    
                     return { pageIndex: i, orderNumber: foundOrderNumber };
                 } catch (e) {
                     return { pageIndex: i, orderNumber: null, error: true };
@@ -132,12 +130,12 @@ export default function ReporteRetailPage() {
         const extractedData = await Promise.all(pagePromises);
 
         for (const data of extractedData) {
-            if (data.error) {
+            if (data.error || !data.orderNumber) {
                 unmappedPages.push(data.pageIndex);
                 continue;
             }
     
-            if (data.orderNumber && orderToDocMap.has(data.orderNumber)) {
+            if (orderToDocMap.has(data.orderNumber)) {
                 const docNumber = orderToDocMap.get(data.orderNumber)!;
                 pageInfo.push({ pageIndex: data.pageIndex, docNumber });
             } else {
@@ -145,7 +143,6 @@ export default function ReporteRetailPage() {
             }
         }
 
-        // 3. Sort pages based on document number
         pageInfo.sort((a, b) => a.docNumber - b.docNumber);
         
         const sortedPageIndices = [
@@ -153,7 +150,6 @@ export default function ReporteRetailPage() {
             ...unmappedPages
         ];
 
-        // 4. Create new PDF with sorted pages
         const pdfBufferForPdfLib = await pdfFile.arrayBuffer();
         const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
         const sortedPdf = await PDFDocument.create();
