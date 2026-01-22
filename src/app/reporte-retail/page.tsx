@@ -60,22 +60,24 @@ export default function ReporteRetailPage() {
         const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
         if (json.length === 0) {
-            throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
+            toast({ title: "Archivo Excel vacío", description: "El archivo Excel está vacío o no tiene el formato esperado.", variant: "destructive" });
+            setLoading(false);
+            return;
         }
         
-        const headers = Object.keys(json[0]);
-        
-        const orderHeader = headers.find(h => {
+        const orderHeader = Object.keys(json[0]).find(h => {
           const cleaned = h.trim().toLowerCase();
           return cleaned.includes('orden') || cleaned.includes('etiquetas de fila');
         });
-        const docHeader = headers.find(h => {
+        const docHeader = Object.keys(json[0]).find(h => {
           const cleaned = h.trim().toLowerCase();
           return cleaned.includes('documento') || cleaned.includes('ebeln');
         });
 
         if (!orderHeader || !docHeader) {
-            throw new Error("El archivo Excel debe contener columnas para 'orden' ('Etiquetas de fila') y 'documento' ('EBELN').");
+            toast({ title: "Columnas no encontradas", description: "El archivo Excel debe contener columnas para 'orden' ('Etiquetas de fila') y 'documento' ('EBELN').", variant: "destructive" });
+            setLoading(false);
+            return;
         }
 
         const orderToDocMap = new Map<string, number>();
@@ -88,7 +90,9 @@ export default function ReporteRetailPage() {
         }
         
         if (orderToDocMap.size === 0) {
-            throw new Error("No se encontró un mapeo válido de orden a documento en el Excel.");
+            toast({ title: "Sin datos en Excel", description: "No se encontró un mapeo válido de orden a documento en el Excel.", variant: "destructive" });
+            setLoading(false);
+            return;
         }
 
         // 2. Parse PDF and extract order number from each page safely
@@ -104,10 +108,17 @@ export default function ReporteRetailPage() {
             const pagePromise = pdfDocument.getPage(i + 1).then(async (page) => {
                 const textContent = await page.getTextContent();
                 const text = textContent.items.map((item: any) => item.str).join(' ');
-                const orderRegex = /Orden[\s\S]*?(\d{10})/;
-                const match = text.match(orderRegex);
-                const orderNumber = match ? match[1] : null;
-                return { pageIndex: i, orderNumber };
+                
+                const potentialOrderNumbers = text.match(/\d{10}/g) || [];
+                let foundOrderNumber: string | null = null;
+
+                for (const num of potentialOrderNumbers) {
+                  if (orderToDocMap.has(num)) {
+                    foundOrderNumber = num;
+                    break;
+                  }
+                }
+                return { pageIndex: i, orderNumber: foundOrderNumber };
             }).catch(() => {
                 return { pageIndex: i, orderNumber: null, error: true };
             });
@@ -133,7 +144,6 @@ export default function ReporteRetailPage() {
         // 3. Sort pages based on document number
         pageInfo.sort((a, b) => a.docNumber - b.docNumber);
         
-        // Combine sorted mapped pages with unmapped pages at the end
         const sortedPageIndices = [
             ...pageInfo.map(p => p.pageIndex),
             ...unmappedPages
@@ -145,10 +155,8 @@ export default function ReporteRetailPage() {
         const sortedPdf = await PDFDocument.create();
 
         for (const pageIndex of sortedPageIndices) {
-          if (pageIndex < originalPdf.getPageCount()) {
             const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
             sortedPdf.addPage(copiedPage);
-          }
         }
 
         const sortedPdfBytes = await sortedPdf.save();
@@ -158,7 +166,7 @@ export default function ReporteRetailPage() {
 
         toast({
           title: "Proceso completado",
-          description: "El PDF ha sido reordenado. La descarga comenzará.",
+          description: `Se reordenaron ${pageInfo.length} páginas. ${unmappedPages.length} páginas no se pudieron mapear y se añadieron al final.`,
         });
 
     } catch (error: any) {
