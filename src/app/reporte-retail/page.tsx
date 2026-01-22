@@ -69,8 +69,17 @@ export default function ReporteRetailPage() {
             return;
         }
         
-        const orderHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase().includes('orden') || h.trim().toLowerCase().includes('etiquetas de fila'));
-        const docHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase().includes('documento') || h.trim().toLowerCase().includes('ebeln'));
+        const excelHeaders = Object.keys(json[0]);
+
+        const orderHeader = 
+            excelHeaders.find(h => h.trim().toLowerCase() === 'orden') ||
+            excelHeaders.find(h => h.trim().toLowerCase() === 'etiquetas de fila') ||
+            excelHeaders.find(h => h.trim().toLowerCase().includes('orden'));
+
+        const docHeader = 
+            excelHeaders.find(h => h.trim().toLowerCase() === 'documento') ||
+            excelHeaders.find(h => h.trim().toLowerCase() === 'ebeln') ||
+            excelHeaders.find(h => h.trim().toLowerCase().includes('documento'));
 
         if (!orderHeader || !docHeader) {
             toast({ title: "Columnas no encontradas", description: "El archivo Excel debe contener columnas para 'orden'/'Etiquetas de fila' y 'documento'/'EBELN'.", variant: "destructive" });
@@ -107,15 +116,14 @@ export default function ReporteRetailPage() {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
-            const allDigits = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
+            const allDigitsInPage = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
 
             let foundOrderNumber: string | null = null;
             
-            for (const orderNumberFromExcel of excelOrderNumbers) {
-                if (allDigits.includes(orderNumberFromExcel)) {
-                    foundOrderNumber = orderNumberFromExcel;
-                    break;
-                }
+            const foundExcelOrder = excelOrderNumbers.find(excelOrder => allDigitsInPage.includes(excelOrder));
+
+            if (foundExcelOrder) {
+                 foundOrderNumber = foundExcelOrder;
             }
             
             if (foundOrderNumber && orderToDocMap.has(foundOrderNumber)) {
@@ -135,6 +143,13 @@ export default function ReporteRetailPage() {
                 rawText: rawText,
                 orders: excelOrderNumbers,
             });
+            toast({
+                title: "No se pudo ordenar",
+                description: `Se ordenaron 0 de ${pdfDocument.numPages} páginas. Revisa la información de depuración.`,
+                variant: "destructive",
+            });
+            setLoading(false);
+            return;
         }
 
         // 3. Sort pages based on document number
@@ -162,7 +177,7 @@ export default function ReporteRetailPage() {
 
         toast({
           title: "Proceso completado",
-          description: `Se reordenaron ${pageInfo.length} páginas. ${unmappedPages.length} páginas no se pudieron mapear y se añadieron al final.`,
+          description: `Se reordenaron ${pageInfo.length} de ${pdfDocument.numPages} páginas. ${unmappedPages.length} páginas no se pudieron mapear y se añadieron al final.`,
         });
 
     } catch (error: any) {
