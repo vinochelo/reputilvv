@@ -106,19 +106,23 @@ export default function ReporteRetailPage() {
         const pagePromises = [];
         for (let i = 0; i < pdfDocument.numPages; i++) {
             const pagePromise = pdfDocument.getPage(i + 1).then(async (page) => {
-                const textContent = await page.getTextContent();
-                const text = textContent.items.map((item: any) => item.str).join(' ');
-                
-                const potentialOrderNumbers = text.match(/\d{10}/g) || [];
-                let foundOrderNumber: string | null = null;
+                try {
+                    const textContent = await page.getTextContent();
+                    const text = textContent.items.map((item: any) => item.str).join('');
+                    
+                    const potentialOrderNumbers = text.match(/\d{10}/g) || [];
+                    let foundOrderNumber: string | null = null;
 
-                for (const num of potentialOrderNumbers) {
-                  if (orderToDocMap.has(num)) {
-                    foundOrderNumber = num;
-                    break;
-                  }
+                    for (const num of potentialOrderNumbers) {
+                      if (orderToDocMap.has(num)) {
+                        foundOrderNumber = num;
+                        break;
+                      }
+                    }
+                    return { pageIndex: i, orderNumber: foundOrderNumber };
+                } catch (e) {
+                    return { pageIndex: i, orderNumber: null, error: true };
                 }
-                return { pageIndex: i, orderNumber: foundOrderNumber };
             }).catch(() => {
                 return { pageIndex: i, orderNumber: null, error: true };
             });
@@ -170,7 +174,6 @@ export default function ReporteRetailPage() {
         });
 
     } catch (error: any) {
-      console.error("Error processing files:", error);
       toast({
         title: "Error al procesar los archivos",
         description: error.message || "No se pudo completar el proceso. Revisa los archivos e intenta de nuevo.",
