@@ -84,8 +84,7 @@ const sortRetailPdfFlow = ai.defineFlow(
 
             return { pageIndex: currentPageIndex, orderNumber };
         }).catch((err: any) => {
-            // If text extraction fails for a page, log it and continue.
-            console.error(`Error extracting text from page ${currentPageIndex + 1}:`, err.message);
+            // If text extraction fails for a page, return an error state but don't crash.
             return { pageIndex: currentPageIndex, orderNumber: null, error: true };
         });
 
@@ -107,13 +106,8 @@ const sortRetailPdfFlow = ai.defineFlow(
             const docNumber = orderToDocMap.get(data.orderNumber)!;
             pageInfo.push({ pageIndex: data.pageIndex, docNumber });
         } else {
-            console.warn(`Could not find order number or mapping for page ${data.pageIndex + 1}.`);
             unmappedPages.push(data.pageIndex);
         }
-    }
-    
-    if (pageInfo.length === 0) {
-        throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' y que los números de orden de 10 dígitos coincidan con los del archivo Excel.");
     }
 
     // 3. Sort pages based on document number
