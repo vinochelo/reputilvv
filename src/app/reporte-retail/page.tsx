@@ -11,7 +11,6 @@ import * as pdfjs from 'pdfjs-dist';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // This is required for pdfjs-dist to work in the browser
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -22,7 +21,7 @@ export default function ReporteRetailPage() {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState<{pdf: string | null, excel: string | null}>({ pdf: null, excel: null });
-  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [debugData, setDebugData] = useState<{rawText: string, orders: string[]} | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -44,7 +43,7 @@ export default function ReporteRetailPage() {
     if (type === 'pdf') setPdfFile(file);
     if (type === 'excel') setExcelFile(file);
     setFileName(prev => ({ ...prev, [type]: file.name }));
-    setDebugInfo('');
+    setDebugData(null);
   };
 
   const handleProcess = async () => {
@@ -54,8 +53,7 @@ export default function ReporteRetailPage() {
     }
 
     setLoading(true);
-    setDebugInfo('');
-    const debugLog: string[] = [];
+    setDebugData(null);
     
     try {
         // 1. Read and parse Excel
@@ -89,8 +87,6 @@ export default function ReporteRetailPage() {
             }
         });
         
-        debugLog.push(`Órdenes encontradas en Excel: ${Array.from(orderToDocMap.keys()).join(', ')}\n`);
-
         if (orderToDocMap.size === 0) {
             toast({ title: "Sin datos en Excel", description: "No se encontró un mapeo válido de orden a documento en el Excel.", variant: "destructive" });
             setLoading(false);
@@ -98,8 +94,8 @@ export default function ReporteRetailPage() {
         }
         
         // 2. Read PDF and find order numbers
-        const pdfBufferForPdfjs = await pdfFile.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: pdfBufferForPdfjs });
+        const pdfBuffer = await pdfFile.arrayBuffer();
+        const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
         const pdfDocument = await loadingTask.promise;
         
         const pageInfo: { pageIndex: number; docNumber: number }[] = [];
@@ -111,19 +107,13 @@ export default function ReporteRetailPage() {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
-            // Clean text to get only digits
-            const text = textContent.items.map((item: any) => item.str).join('');
-            const allDigits = text.replace(/\D/g, '');
-            
-            debugLog.push(`--- Página ${i + 1} ---`);
-            debugLog.push(`Dígitos extraídos: ${allDigits}`);
+            const allDigits = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
 
             let foundOrderNumber: string | null = null;
             
             for (const orderNumberFromExcel of excelOrderNumbers) {
                 if (allDigits.includes(orderNumberFromExcel)) {
                     foundOrderNumber = orderNumberFromExcel;
-                    debugLog.push(`  -> ¡COINCIDENCIA ENCONTRADA! La orden ${foundOrderNumber} está en esta página.`);
                     break;
                 }
             }
@@ -133,9 +123,18 @@ export default function ReporteRetailPage() {
                 pageInfo.push({ pageIndex: i, docNumber });
             } else {
                 unmappedPages.push(i);
-                debugLog.push('  -> No se encontró ninguna orden de Excel en esta página.');
             }
-            debugLog.push(' '); // Add a blank line for readability
+        }
+
+        // If sorting failed, provide debug info
+        if (pageInfo.length === 0 && pdfDocument.numPages > 0) {
+            const firstPage = await pdfDocument.getPage(1);
+            const textContent = await firstPage.getTextContent();
+            const rawText = textContent.items.map((item: any) => item.str).join(' ');
+            setDebugData({
+                rawText: rawText,
+                orders: excelOrderNumbers,
+            });
         }
 
         // 3. Sort pages based on document number
@@ -168,14 +167,12 @@ export default function ReporteRetailPage() {
 
     } catch (error: any) {
       console.error("Error processing files:", error);
-      debugLog.push(`\n--- ERROR INESPERADO ---\n${error.stack}`);
       toast({
         title: "Error al procesar los archivos",
         description: error.message || "No se pudo completar el proceso. Revisa los archivos e intenta de nuevo.",
         variant: "destructive",
       });
     } finally {
-      setDebugInfo(debugLog.join('\n'));
       setLoading(false);
     }
   };
@@ -251,17 +248,29 @@ export default function ReporteRetailPage() {
         </div>
       </Card>
 
-      {debugInfo && (
-        <Accordion type="single" collapsible className="w-full max-w-4xl mx-auto mt-8">
-          <AccordionItem value="item-1">
-            <AccordionTrigger>Ver Información de Depuración</AccordionTrigger>
-            <AccordionContent>
-              <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[500px] overflow-auto">
-                {debugInfo}
+      {debugData && (
+        <Card className="max-w-4xl mx-auto mt-8">
+          <CardHeader>
+            <CardTitle>Información de Depuración</CardTitle>
+            <CardDescription>
+              No se pudo ordenar ninguna página. Aquí está lo que la aplicación extrajo de la primera página del PDF y lo que buscó del Excel.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">Texto Extraído de la Primera Página del PDF:</h4>
+              <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[300px] overflow-auto">
+                {debugData.rawText}
               </pre>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">Números de Orden Buscados (del archivo Excel):</h4>
+              <p className="p-4 bg-muted rounded-md text-xs">
+                {debugData.orders.join(', ')}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
        <section className="mt-16 max-w-4xl mx-auto">
