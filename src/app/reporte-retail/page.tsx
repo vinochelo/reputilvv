@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
@@ -10,6 +11,7 @@ import * as pdfjs from 'pdfjs-dist';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // This is required for pdfjs-dist to work in the browser
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -20,6 +22,7 @@ export default function ReporteRetailPage() {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState<{pdf: string | null, excel: string | null}>({ pdf: null, excel: null });
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const excelInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -41,6 +44,7 @@ export default function ReporteRetailPage() {
     if (type === 'pdf') setPdfFile(file);
     if (type === 'excel') setExcelFile(file);
     setFileName(prev => ({ ...prev, [type]: file.name }));
+    setDebugInfo('');
   };
 
   const handleProcess = async () => {
@@ -50,8 +54,11 @@ export default function ReporteRetailPage() {
     }
 
     setLoading(true);
+    setDebugInfo('');
+    const debugLog: string[] = [];
     
     try {
+        // 1. Read and parse Excel
         const excelBuffer = await excelFile.arrayBuffer();
         const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
@@ -64,36 +71,33 @@ export default function ReporteRetailPage() {
             return;
         }
         
-        const orderHeader = Object.keys(json[0]).find(h => {
-          const cleaned = h.trim().toLowerCase();
-          return cleaned.includes('orden') || cleaned.includes('etiquetas de fila');
-        });
-        const docHeader = Object.keys(json[0]).find(h => {
-          const cleaned = h.trim().toLowerCase();
-          return cleaned.includes('documento') || cleaned.includes('ebeln');
-        });
+        const orderHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase().includes('orden') || h.trim().toLowerCase().includes('etiquetas de fila'));
+        const docHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase().includes('documento') || h.trim().toLowerCase().includes('ebeln'));
 
         if (!orderHeader || !docHeader) {
-            toast({ title: "Columnas no encontradas", description: "El archivo Excel debe contener columnas para 'orden' ('Etiquetas de fila') y 'documento' ('EBELN').", variant: "destructive" });
+            toast({ title: "Columnas no encontradas", description: "El archivo Excel debe contener columnas para 'orden'/'Etiquetas de fila' y 'documento'/'EBELN'.", variant: "destructive" });
             setLoading(false);
             return;
         }
 
         const orderToDocMap = new Map<string, number>();
-        for (const row of json) {
-          const order = String(row[orderHeader]).trim();
-          const docNum = Number(row[docHeader]);
-          if (order && !isNaN(docNum)) {
-            orderToDocMap.set(order, docNum);
-          }
-        }
+        json.forEach((row: any) => {
+            const order = String(row[orderHeader]).trim();
+            const docNum = Number(row[docHeader]);
+            if (order && !isNaN(docNum)) {
+                orderToDocMap.set(order, docNum);
+            }
+        });
         
+        debugLog.push(`Órdenes encontradas en Excel: ${Array.from(orderToDocMap.keys()).join(', ')}\n`);
+
         if (orderToDocMap.size === 0) {
             toast({ title: "Sin datos en Excel", description: "No se encontró un mapeo válido de orden a documento en el Excel.", variant: "destructive" });
             setLoading(false);
             return;
         }
-
+        
+        // 2. Read PDF and find order numbers
         const pdfBufferForPdfjs = await pdfFile.arrayBuffer();
         const loadingTask = pdfjs.getDocument({ data: pdfBufferForPdfjs });
         const pdfDocument = await loadingTask.promise;
@@ -101,59 +105,52 @@ export default function ReporteRetailPage() {
         const pageInfo: { pageIndex: number; docNumber: number }[] = [];
         const unmappedPages: number[] = [];
         
-        const pagePromises = [];
+        const excelOrderNumbers = Array.from(orderToDocMap.keys());
+
         for (let i = 0; i < pdfDocument.numPages; i++) {
-            const pagePromise = pdfDocument.getPage(i + 1).then(async (page) => {
-                try {
-                    const textContent = await page.getTextContent();
-                    const text = textContent.items.map((item: any) => item.str).join('');
-                    const allDigits = text.replace(/\D/g, '');
-                    let foundOrderNumber: string | null = null;
+            const page = await pdfDocument.getPage(i + 1);
+            const textContent = await page.getTextContent();
+            
+            // Clean text to get only digits
+            const text = textContent.items.map((item: any) => item.str).join('');
+            const allDigits = text.replace(/\D/g, '');
+            
+            debugLog.push(`--- Página ${i + 1} ---`);
+            debugLog.push(`Dígitos extraídos: ${allDigits}`);
 
-                    for (const orderNumberFromExcel of orderToDocMap.keys()) {
-                        if (allDigits.includes(orderNumberFromExcel)) {
-                            foundOrderNumber = orderNumberFromExcel;
-                            break;
-                        }
-                    }
-                    
-                    return { pageIndex: i, orderNumber: foundOrderNumber };
-                } catch (e) {
-                    return { pageIndex: i, orderNumber: null, error: true };
+            let foundOrderNumber: string | null = null;
+            
+            for (const orderNumberFromExcel of excelOrderNumbers) {
+                if (allDigits.includes(orderNumberFromExcel)) {
+                    foundOrderNumber = orderNumberFromExcel;
+                    debugLog.push(`  -> ¡COINCIDENCIA ENCONTRADA! La orden ${foundOrderNumber} está en esta página.`);
+                    break;
                 }
-            }).catch(() => {
-                return { pageIndex: i, orderNumber: null, error: true };
-            });
-            pagePromises.push(pagePromise);
-        }
-    
-        const extractedData = await Promise.all(pagePromises);
-
-        for (const data of extractedData) {
-            if (data.error || !data.orderNumber) {
-                unmappedPages.push(data.pageIndex);
-                continue;
             }
-    
-            if (orderToDocMap.has(data.orderNumber)) {
-                const docNumber = orderToDocMap.get(data.orderNumber)!;
-                pageInfo.push({ pageIndex: data.pageIndex, docNumber });
+            
+            if (foundOrderNumber && orderToDocMap.has(foundOrderNumber)) {
+                const docNumber = orderToDocMap.get(foundOrderNumber)!;
+                pageInfo.push({ pageIndex: i, docNumber });
             } else {
-                unmappedPages.push(data.pageIndex);
+                unmappedPages.push(i);
+                debugLog.push('  -> No se encontró ninguna orden de Excel en esta página.');
             }
+            debugLog.push(' '); // Add a blank line for readability
         }
 
+        // 3. Sort pages based on document number
         pageInfo.sort((a, b) => a.docNumber - b.docNumber);
         
         const sortedPageIndices = [
             ...pageInfo.map(p => p.pageIndex),
             ...unmappedPages
         ];
-
-        const pdfBufferForPdfLib = await pdfFile.arrayBuffer();
+        
+        // 4. Create new PDF with sorted pages
+        const pdfBufferForPdfLib = await pdfFile.arrayBuffer(); // Re-read buffer
         const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
         const sortedPdf = await PDFDocument.create();
-
+        
         for (const pageIndex of sortedPageIndices) {
             const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
             sortedPdf.addPage(copiedPage);
@@ -170,12 +167,15 @@ export default function ReporteRetailPage() {
         });
 
     } catch (error: any) {
+      console.error("Error processing files:", error);
+      debugLog.push(`\n--- ERROR INESPERADO ---\n${error.stack}`);
       toast({
         title: "Error al procesar los archivos",
         description: error.message || "No se pudo completar el proceso. Revisa los archivos e intenta de nuevo.",
         variant: "destructive",
       });
     } finally {
+      setDebugInfo(debugLog.join('\n'));
       setLoading(false);
     }
   };
@@ -250,6 +250,20 @@ export default function ReporteRetailPage() {
             )}
         </div>
       </Card>
+
+      {debugInfo && (
+        <Accordion type="single" collapsible className="w-full max-w-4xl mx-auto mt-8">
+          <AccordionItem value="item-1">
+            <AccordionTrigger>Ver Información de Depuración</AccordionTrigger>
+            <AccordionContent>
+              <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[500px] overflow-auto">
+                {debugInfo}
+              </pre>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
+
        <section className="mt-16 max-w-4xl mx-auto">
         <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
           ¿Cómo funciona?
