@@ -64,11 +64,18 @@ export default function ReporteRetailPage() {
         }
         
         const headers = Object.keys(json[0]);
-        const orderHeader = headers.find(h => h.trim().toLowerCase().includes('orden'));
-        const docHeader = headers.find(h => h.trim().toLowerCase().includes('documento'));
+        
+        const orderHeader = headers.find(h => {
+          const cleaned = h.trim().toLowerCase();
+          return cleaned.includes('orden') || cleaned.includes('etiquetas de fila');
+        });
+        const docHeader = headers.find(h => {
+          const cleaned = h.trim().toLowerCase();
+          return cleaned.includes('documento') || cleaned.includes('ebeln');
+        });
 
         if (!orderHeader || !docHeader) {
-            throw new Error("El archivo Excel debe contener columnas para 'orden' y 'documento'.");
+            throw new Error("El archivo Excel debe contener columnas para 'orden' ('Etiquetas de fila') y 'documento' ('EBELN').");
         }
 
         const orderToDocMap = new Map<string, number>();
