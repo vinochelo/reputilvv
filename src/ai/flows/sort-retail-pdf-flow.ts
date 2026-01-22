@@ -68,20 +68,23 @@ const sortRetailPdfFlow = ai.defineFlow(
     
     const render_page = (pageData: any) => {
         // From OCR, the text is like: "Orden\n5400132743" or "Orden 5400132743"
-        const text = pageData.getTextContent().items.map((item: any) => item.str).join(' ');
-        const orderRegex = /Orden\s*([0-9]{8,})/;
-        const match = text.match(orderRegex);
-        const orderNumber = match ? match[1] : null;
-        const currentPageIndex = pageData.pageIndex;
+        // getTextContent returns a promise, so we need to handle it asynchronously.
+        return pageData.getTextContent().then((textContent: any) => {
+            const text = textContent.items.map((item: any) => item.str).join(' ');
+            const orderRegex = /Orden\s*([0-9]{8,})/;
+            const match = text.match(orderRegex);
+            const orderNumber = match ? match[1] : null;
+            const currentPageIndex = pageData.pageIndex;
 
-        if (orderNumber && orderToDocMap.has(orderNumber)) {
-            const docNumber = orderToDocMap.get(orderNumber)!;
-            pageInfo.push({ pageIndex: currentPageIndex, docNumber });
-        } else {
-            console.warn(`Could not find order number or mapping for page ${currentPageIndex + 1}.`);
-            unmappedPages.push(currentPageIndex);
-        }
-        return ""; // we don't need to return any text from render_page
+            if (orderNumber && orderToDocMap.has(orderNumber)) {
+                const docNumber = orderToDocMap.get(orderNumber)!;
+                pageInfo.push({ pageIndex: currentPageIndex, docNumber });
+            } else {
+                console.warn(`Could not find order number or mapping for page ${currentPageIndex + 1}.`);
+                unmappedPages.push(currentPageIndex);
+            }
+            return ""; // we don't need to return any text from render_page
+        });
     }
 
     await pdf(pdfBuffer, { pagerender: render_page });
