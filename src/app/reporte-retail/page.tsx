@@ -143,11 +143,13 @@ export default function ReporteRetailPage() {
         const pdfBufferForPdfLib = await pdfFile.arrayBuffer();
         const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
         const sortedPdf = await PDFDocument.create();
-        
-        // Sanity check to prevent out-of-bounds errors
-        const validIndices = sortedPageIndices.filter(idx => idx < originalPdf.getPageCount());
-        const copiedPages = await sortedPdf.copyPages(originalPdf, validIndices);
-        copiedPages.forEach(page => sortedPdf.addPage(page));
+
+        for (const pageIndex of sortedPageIndices) {
+          if (pageIndex < originalPdf.getPageCount()) {
+            const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
+            sortedPdf.addPage(copiedPage);
+          }
+        }
 
         const sortedPdfBytes = await sortedPdf.save();
         const blob = new Blob([sortedPdfBytes], { type: "application/pdf" });
