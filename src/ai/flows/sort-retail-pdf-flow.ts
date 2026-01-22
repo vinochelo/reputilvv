@@ -61,36 +61,43 @@ const sortRetailPdfFlow = ai.defineFlow(
         throw new Error("No se encontró un mapeo válido de orden a documento en el Excel.");
     }
 
-    // 2. Parse PDF and extract order number from each page
+    // 2. Parse PDF and extract order number from each page safely
     const pdfBuffer = Buffer.from(pdfDataUri.split(',')[1], 'base64');
     const pageInfo: { pageIndex: number; docNumber: number }[] = [];
     const unmappedPages: number[] = [];
     
-    // Correctly process each page using pdf-parse's pagerender option
+    const pagePromises: Promise<{ pageIndex: number; orderNumber: string | null }>[] = [];
+
     const render_page = (pageData: any) => {
-        // getTextContent returns a promise, so we need to handle it asynchronously.
-        return pageData.getTextContent().then((textContent: any) => {
+        const pagePromise = pageData.getTextContent().then((textContent: any) => {
             const text = textContent.items.map((item: any) => item.str).join(' ');
             const orderRegex = /Orden\s*([0-9]{8,})/;
             const match = text.match(orderRegex);
             const orderNumber = match ? match[1] : null;
-            
-            // The pageData object from pdf.js has `pageNumber` (1-based), not `pageIndex`.
-            // Using pageIndex was causing an error as it was undefined.
             const currentPageIndex = pageData.pageNumber - 1;
 
-            if (orderNumber && orderToDocMap.has(orderNumber)) {
-                const docNumber = orderToDocMap.get(orderNumber)!;
-                pageInfo.push({ pageIndex: currentPageIndex, docNumber });
-            } else {
-                console.warn(`Could not find order number or mapping for page ${currentPageIndex + 1}.`);
-                unmappedPages.push(currentPageIndex);
-            }
-            return ""; // We don't need to return any text, we are just using this to iterate
+            return { pageIndex: currentPageIndex, orderNumber };
         });
-    }
+        pagePromises.push(pagePromise);
+        return ""; // Return value is not used by pdf-parse
+    };
 
+    // This populates pagePromises, but doesn't wait for them to finish.
     await pdf(pdfBuffer, { pagerender: render_page });
+
+    // Now, we wait for all the text extraction promises to resolve.
+    const extractedData = await Promise.all(pagePromises);
+
+    // Now we can safely process the results.
+    for (const data of extractedData) {
+        if (data.orderNumber && orderToDocMap.has(data.orderNumber)) {
+            const docNumber = orderToDocMap.get(data.orderNumber)!;
+            pageInfo.push({ pageIndex: data.pageIndex, docNumber });
+        } else {
+            console.warn(`Could not find order number or mapping for page ${data.pageIndex + 1}.`);
+            unmappedPages.push(data.pageIndex);
+        }
+    }
     
     if (pageInfo.length === 0) {
         throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' seguida de un número.");
