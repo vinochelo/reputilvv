@@ -92,8 +92,8 @@ export default function ReporteRetailPage() {
         }
 
         // 2. Parse PDF and extract order number from each page safely
-        const pdfBuffer = await pdfFile.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+        const pdfBufferForPdfjs = await pdfFile.arrayBuffer();
+        const loadingTask = pdfjs.getDocument({ data: pdfBufferForPdfjs });
         const pdfDocument = await loadingTask.promise;
         
         const pageInfo: { pageIndex: number; docNumber: number }[] = [];
@@ -140,7 +140,8 @@ export default function ReporteRetailPage() {
         ];
 
         // 4. Create new PDF with sorted pages
-        const originalPdf = await PDFDocument.load(pdfBuffer);
+        const pdfBufferForPdfLib = await pdfFile.arrayBuffer();
+        const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
         const sortedPdf = await PDFDocument.create();
         
         // Sanity check to prevent out-of-bounds errors
