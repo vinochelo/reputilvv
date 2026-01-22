@@ -3,11 +3,17 @@
 import { useState, useRef, ChangeEvent } from 'react';
 import { ArrowLeft, BrainCircuit, File as FileIcon, FileSpreadsheet, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
+import { PDFDocument } from 'pdf-lib';
+import pdf from 'pdf-parse';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { sortRetailPdf } from '@/ai/flows/sort-retail-pdf-flow';
+
+// This is required for pdf-parse to work in the browser
+(window as any).pdfjsWorker = import('pdfjs-dist/build/pdf.worker.min.mjs');
+
 
 export default function ReporteRetailPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -37,15 +43,6 @@ export default function ReporteRetailPage() {
     setFileName(prev => ({ ...prev, [type]: file.name }));
   };
 
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = (e) => reject(e);
-      reader.readAsDataURL(file);
-    });
-  }
-
   const handleProcess = async () => {
     if (!pdfFile || !excelFile) {
       toast({ title: "Faltan archivos", description: "Por favor, sube ambos archivos, el PDF y el Excel.", variant: "destructive" });
@@ -55,17 +52,114 @@ export default function ReporteRetailPage() {
     setLoading(true);
     
     try {
-        const pdfDataUri = await fileToDataUri(pdfFile);
-        const excelDataUri = await fileToDataUri(excelFile);
+        // 1. Parse Excel to create order -> document number map
+        const excelBuffer = await excelFile.arrayBuffer();
+        const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-        const resultPdfDataUri = await sortRetailPdf(pdfDataUri, excelDataUri);
+        if (json.length === 0) {
+            throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
+        }
+        
+        const headers = Object.keys(json[0]);
+        const orderHeader = headers.find(h => h.toLowerCase().includes('orden'));
+        const docHeader = headers.find(h => h.toLowerCase().includes('documento'));
+
+        if (!orderHeader || !docHeader) {
+            throw new Error("El archivo Excel debe contener columnas para 'orden' y 'documento'.");
+        }
+
+        const orderToDocMap = new Map<string, number>();
+        for (const row of json) {
+          const order = String(row[orderHeader]).trim();
+          const docNum = Number(row[docHeader]);
+          if (order && !isNaN(docNum)) {
+            orderToDocMap.set(order, docNum);
+          }
+        }
+        
+        if (orderToDocMap.size === 0) {
+            throw new Error("No se encontró un mapeo válido de orden a documento en el Excel.");
+        }
+
+        // 2. Parse PDF and extract order number from each page safely
+        const pdfBuffer = await pdfFile.arrayBuffer();
+        const pageInfo: { pageIndex: number; docNumber: number }[] = [];
+        const unmappedPages: number[] = [];
+        
+        const pagePromises: Promise<{ pageIndex: number; orderNumber: string | null; error?: boolean }>[] = [];
+        
+        await pdf(Buffer.from(pdfBuffer), { 
+            pagerender: (pageData: any) => {
+                if (!pageData || typeof pageData.getTextContent !== 'function') {
+                    // Create a promise that resolves to an error state
+                    const errorPromise = Promise.resolve({ pageIndex: (pageData?.pageNumber ?? 0) -1, orderNumber: null, error: true });
+                    pagePromises.push(errorPromise);
+                    return ""; 
+                }
+        
+                const currentPageIndex = pageData.pageNumber - 1;
+        
+                const pagePromise = pageData.getTextContent().then((textContent: any) => {
+                    const text = (textContent?.items ?? []).map((item: any) => item.str).join(' ');
+                    const orderRegex = /Orden[\s\S]*?(\d{10})/;
+                    const match = text.match(orderRegex);
+                    const orderNumber = match ? match[1] : null;
+                    return { pageIndex: currentPageIndex, orderNumber };
+                }).catch(() => {
+                    return { pageIndex: currentPageIndex, orderNumber: null, error: true };
+                });
+        
+                pagePromises.push(pagePromise);
+                return ""; // Return value is not used by pdf-parse
+            }
+        });
+    
+        const extractedData = await Promise.all(pagePromises);
+
+        for (const data of extractedData) {
+            if (data.error) {
+                unmappedPages.push(data.pageIndex);
+                continue;
+            }
+    
+            if (data.orderNumber && orderToDocMap.has(data.orderNumber)) {
+                const docNumber = orderToDocMap.get(data.orderNumber)!;
+                pageInfo.push({ pageIndex: data.pageIndex, docNumber });
+            } else {
+                unmappedPages.push(data.pageIndex);
+            }
+        }
+
+        // 3. Sort pages based on document number
+        pageInfo.sort((a, b) => a.docNumber - b.docNumber);
+        
+        // Combine sorted mapped pages with unmapped pages at the end
+        const sortedPageIndices = [
+            ...pageInfo.map(p => p.pageIndex),
+            ...unmappedPages
+        ];
+
+        // 4. Create new PDF with sorted pages
+        const originalPdf = await PDFDocument.load(pdfBuffer);
+        const sortedPdf = await PDFDocument.create();
+        
+        // Sanity check to prevent out-of-bounds errors
+        const validIndices = sortedPageIndices.filter(idx => idx < originalPdf.getPageCount());
+        const copiedPages = await sortedPdf.copyPages(originalPdf, validIndices);
+        copiedPages.forEach(page => sortedPdf.addPage(page));
+
+        const sortedPdfBytes = await sortedPdf.save();
+        const blob = new Blob([sortedPdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        handleDownload(url, `ordenado_${pdfFile.name}`);
 
         toast({
           title: "Proceso completado",
           description: "El PDF ha sido reordenado. La descarga comenzará.",
         });
-
-        handleDownload(resultPdfDataUri, `ordenado_${pdfFile.name}`);
 
     } catch (error: any) {
       console.error("Error processing files:", error);
@@ -79,14 +173,14 @@ export default function ReporteRetailPage() {
     }
   };
 
-  const handleDownload = (dataUri: string, name: string) => {
+  const handleDownload = (url: string, name: string) => {
     const link = document.createElement('a');
-    link.href = dataUri;
+    link.href = url;
     link.download = name;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    // No es necesario revocar el object URL para data URIs
+    URL.revokeObjectURL(url);
   };
 
 
@@ -167,9 +261,9 @@ export default function ReporteRetailPage() {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
               <span className="text-2xl font-bold">2</span>
             </div>
-            <h4 className="text-xl font-semibold text-foreground">La IA Procesa la Información</h4>
+            <h4 className="text-xl font-semibold text-foreground">El Navegador Procesa</h4>
             <p className="text-foreground/80">
-              La herramienta lee el número de "Orden" de cada página del PDF, lo busca en tu Excel para encontrar el "Número de Documento" correspondiente.
+              Tu navegador lee el número de "Orden" de cada página del PDF, lo busca en tu Excel para encontrar el "Número de Documento" correspondiente.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
