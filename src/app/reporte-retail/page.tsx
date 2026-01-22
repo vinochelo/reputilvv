@@ -64,8 +64,8 @@ export default function ReporteRetailPage() {
         }
         
         const headers = Object.keys(json[0]);
-        const orderHeader = headers.find(h => h.toLowerCase().includes('orden'));
-        const docHeader = headers.find(h => h.toLowerCase().includes('documento'));
+        const orderHeader = headers.find(h => h.trim().toLowerCase().includes('orden'));
+        const docHeader = headers.find(h => h.trim().toLowerCase().includes('documento'));
 
         if (!orderHeader || !docHeader) {
             throw new Error("El archivo Excel debe contener columnas para 'orden' y 'documento'.");
