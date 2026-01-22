@@ -64,71 +64,66 @@ export default function ReporteRetailPage() {
         const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
         if (json.length === 0) {
-            toast({ title: "Archivo Excel vacío", description: "El archivo Excel está vacío o no tiene el formato esperado.", variant: "destructive" });
-            setLoading(false);
-            return;
+            throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
         }
         
-        const excelHeaders = Object.keys(json[0]);
+        // Find headers, being flexible with whitespace
+        // The value to SORT BY is "Etiquetas de fila" (column A)
+        const sortHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'etiquetas de fila');
+        
+        // The value to SEARCH FOR IN THE PDF is "EBELN" (column B)
+        const searchHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
 
-        const orderHeader = 
-            excelHeaders.find(h => h.trim().toLowerCase() === 'orden') ||
-            excelHeaders.find(h => h.trim().toLowerCase() === 'etiquetas de fila') ||
-            excelHeaders.find(h => h.trim().toLowerCase().includes('orden'));
-
-        const docHeader = 
-            excelHeaders.find(h => h.trim().toLowerCase() === 'documento') ||
-            excelHeaders.find(h => h.trim().toLowerCase() === 'ebeln') ||
-            excelHeaders.find(h => h.trim().toLowerCase().includes('documento'));
-
-        if (!orderHeader || !docHeader) {
-            toast({ title: "Columnas no encontradas", description: "El archivo Excel debe contener columnas para 'orden'/'Etiquetas de fila' y 'documento'/'EBELN'.", variant: "destructive" });
-            setLoading(false);
-            return;
+        if (!sortHeader || !searchHeader) {
+            const foundHeaders = Object.keys(json[0]).join(', ');
+             setDebugData({
+                rawText: `Columnas encontradas en el Excel: ${foundHeaders}`,
+                orders: ["Se esperaban: 'Etiquetas de fila', 'EBELN'"],
+             })
+            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' y 'EBELN'.`);
         }
 
-        const orderToDocMap = new Map<string, number>();
+        // Map: Search Value (EBELN from col B) -> Sort Value (Etiquetas de fila from col A)
+        const searchToSortMap = new Map<string, number>();
         json.forEach((row: any) => {
-            const order = String(row[orderHeader]).trim();
-            const docNum = Number(row[docHeader]);
-            if (order && !isNaN(docNum)) {
-                orderToDocMap.set(order, docNum);
+            const searchValue = String(row[searchHeader]).trim();
+            const sortValue = Number(row[sortHeader]);
+            if (searchValue && !isNaN(sortValue)) {
+                searchToSortMap.set(searchValue, sortValue);
             }
         });
         
-        if (orderToDocMap.size === 0) {
-            toast({ title: "Sin datos en Excel", description: "No se encontró un mapeo válido de orden a documento en el Excel.", variant: "destructive" });
-            setLoading(false);
-            return;
+        if (searchToSortMap.size === 0) {
+            throw new Error("No se encontró un mapeo válido de 'EBELN' a 'Etiquetas de fila' en el Excel.");
         }
         
-        // 2. Read PDF and find order numbers
+        // 2. Read PDF and find search values (EBELN)
         const pdfBuffer = await pdfFile.arrayBuffer();
         const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
         const pdfDocument = await loadingTask.promise;
         
-        const pageInfo: { pageIndex: number; docNumber: number }[] = [];
+        const pageInfo: { pageIndex: number; sortValue: number }[] = [];
         const unmappedPages: number[] = [];
         
-        const excelOrderNumbers = Array.from(orderToDocMap.keys());
+        const excelSearchValues = Array.from(searchToSortMap.keys());
 
         for (let i = 0; i < pdfDocument.numPages; i++) {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
-            const allDigitsInPage = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
+            const pageDigits = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
 
-            let foundOrderNumber: string | null = null;
+            let foundSearchValue: string | null = null;
             
-            const foundExcelOrder = excelOrderNumbers.find(excelOrder => allDigitsInPage.includes(excelOrder));
+            const foundExcelValue = excelSearchValues.find(excelValue => pageDigits.includes(excelValue));
 
-            if (foundExcelOrder) {
-                 foundOrderNumber = foundExcelOrder;
+            if (foundExcelValue) {
+                 foundSearchValue = foundExcelValue;
             }
             
-            if (foundOrderNumber && orderToDocMap.has(foundOrderNumber)) {
-                const docNumber = orderToDocMap.get(foundOrderNumber)!;
-                pageInfo.push({ pageIndex: i, docNumber });
+            if (foundSearchValue && searchToSortMap.has(foundSearchValue)) {
+                const sortValue = searchToSortMap.get(foundSearchValue)!;
+                pageInfo.push({ pageIndex: i, sortValue });
             } else {
                 unmappedPages.push(i);
             }
@@ -141,7 +136,7 @@ export default function ReporteRetailPage() {
             const rawText = textContent.items.map((item: any) => item.str).join(' ');
             setDebugData({
                 rawText: rawText,
-                orders: excelOrderNumbers,
+                orders: excelSearchValues, // These are the EBELN values
             });
             toast({
                 title: "No se pudo ordenar",
@@ -152,8 +147,8 @@ export default function ReporteRetailPage() {
             return;
         }
 
-        // 3. Sort pages based on document number
-        pageInfo.sort((a, b) => a.docNumber - b.docNumber);
+        // 3. Sort pages based on sort value (from 'Etiquetas de fila')
+        pageInfo.sort((a, b) => a.sortValue - b.sortValue);
         
         const sortedPageIndices = [
             ...pageInfo.map(p => p.pageIndex),
@@ -217,7 +212,7 @@ export default function ReporteRetailPage() {
           Reportes de Retail
         </h1>
         <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
-          Sube un PDF de reportes y un archivo Excel con el mapeo de órdenes para generar un nuevo PDF con las páginas ordenadas por número de documento.
+          Sube un PDF y un Excel. La herramienta buscará el valor 'EBELN' del Excel en cada página del PDF y luego ordenará las páginas según el valor 'Etiquetas de fila'.
         </p>
       </div>
 
@@ -268,18 +263,18 @@ export default function ReporteRetailPage() {
           <CardHeader>
             <CardTitle>Información de Depuración</CardTitle>
             <CardDescription>
-              No se pudo ordenar ninguna página. Aquí está lo que la aplicación extrajo de la primera página del PDF y lo que buscó del Excel.
+              No se pudo ordenar ninguna página o hubo un error. Aquí está la información relevante para el diagnóstico.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2">Texto Extraído de la Primera Página del PDF:</h4>
+              <h4 className="font-semibold mb-2">Texto Extraído de la Primera Página del PDF (o de columnas del Excel):</h4>
               <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[300px] overflow-auto">
                 {debugData.rawText}
               </pre>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Números de Orden Buscados (del archivo Excel):</h4>
+              <h4 className="font-semibold mb-2">Valores 'EBELN' buscados (del archivo Excel):</h4>
               <p className="p-4 bg-muted rounded-md text-xs">
                 {debugData.orders.join(', ')}
               </p>
@@ -299,7 +294,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Sube tus Archivos</h4>
             <p className="text-foreground/80">
-              Selecciona el archivo PDF que quieres ordenar y el archivo de Excel que contiene la relación entre "Orden" y "Número de Documento".
+              Selecciona el PDF y el Excel. El Excel debe tener las columnas 'Etiquetas de fila' y 'EBELN'.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
@@ -308,7 +303,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">El Navegador Procesa</h4>
             <p className="text-foreground/80">
-              Tu navegador lee el número de "Orden" de cada página del PDF, lo busca en tu Excel para encontrar el "Número de Documento" correspondiente.
+              Tu navegador lee el número 'EBELN' de cada página del PDF, lo busca en tu Excel y usa 'Etiquetas de fila' para saber cómo ordenar.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
@@ -317,7 +312,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Descarga el PDF Ordenado</h4>
             <p className="text-foreground/80">
-              Se genera un nuevo archivo PDF con todas las páginas del original, pero reordenadas secuencialmente según el "Número de Documento".
+              Se genera un nuevo archivo PDF con todas las páginas reordenadas secuencialmente según el valor de 'Etiquetas de fila'.
             </p>
           </div>
         </div>
