@@ -66,30 +66,43 @@ const sortRetailPdfFlow = ai.defineFlow(
     const pageInfo: { pageIndex: number; docNumber: number }[] = [];
     const unmappedPages: number[] = [];
     
-    const pagePromises: Promise<{ pageIndex: number; orderNumber: string | null }>[] = [];
+    const pagePromises: Promise<{ pageIndex: number; orderNumber: string | null; error?: boolean }>[] = [];
 
     const render_page = (pageData: any) => {
+        // Defensive check for invalid pageData object
+        if (!pageData || typeof pageData.getTextContent !== 'function') {
+            return ""; // Do nothing for invalid page data
+        }
+
+        const currentPageIndex = pageData.pageNumber - 1;
+
         const pagePromise = pageData.getTextContent().then((textContent: any) => {
-            const text = textContent.items.map((item: any) => item.str).join(' ');
+            const text = (textContent?.items ?? []).map((item: any) => item.str).join(' ');
             const orderRegex = /Orden\s*([0-9]{8,})/;
             const match = text.match(orderRegex);
             const orderNumber = match ? match[1] : null;
-            const currentPageIndex = pageData.pageNumber - 1;
 
             return { pageIndex: currentPageIndex, orderNumber };
+        }).catch((err: any) => {
+            // If text extraction fails for a page, log it and continue.
+            console.error(`Error extracting text from page ${currentPageIndex + 1}:`, err.message);
+            return { pageIndex: currentPageIndex, orderNumber: null, error: true };
         });
+
         pagePromises.push(pagePromise);
         return ""; // Return value is not used by pdf-parse
     };
-
-    // This populates pagePromises, but doesn't wait for them to finish.
+    
     await pdf(pdfBuffer, { pagerender: render_page });
 
-    // Now, we wait for all the text extraction promises to resolve.
     const extractedData = await Promise.all(pagePromises);
 
-    // Now we can safely process the results.
     for (const data of extractedData) {
+        if (data.error) {
+            unmappedPages.push(data.pageIndex);
+            continue;
+        }
+
         if (data.orderNumber && orderToDocMap.has(data.orderNumber)) {
             const docNumber = orderToDocMap.get(data.orderNumber)!;
             pageInfo.push({ pageIndex: data.pageIndex, docNumber });
@@ -100,7 +113,7 @@ const sortRetailPdfFlow = ai.defineFlow(
     }
     
     if (pageInfo.length === 0) {
-        throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' seguida de un número.");
+        throw new Error("No se pudo extraer y mapear ninguna orden de las páginas del PDF. Revisa que el PDF contenga la palabra 'Orden' seguida de un número y que el Excel sea correcto.");
     }
 
     // 3. Sort pages based on document number
