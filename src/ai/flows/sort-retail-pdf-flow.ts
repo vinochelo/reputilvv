@@ -66,15 +66,18 @@ const sortRetailPdfFlow = ai.defineFlow(
     const pageInfo: { pageIndex: number; docNumber: number }[] = [];
     const unmappedPages: number[] = [];
     
+    // Correctly process each page using pdf-parse's pagerender option
     const render_page = (pageData: any) => {
-        // From OCR, the text is like: "Orden\n5400132743" or "Orden 5400132743"
         // getTextContent returns a promise, so we need to handle it asynchronously.
         return pageData.getTextContent().then((textContent: any) => {
             const text = textContent.items.map((item: any) => item.str).join(' ');
             const orderRegex = /Orden\s*([0-9]{8,})/;
             const match = text.match(orderRegex);
             const orderNumber = match ? match[1] : null;
-            const currentPageIndex = pageData.pageIndex;
+            
+            // The pageData object from pdf.js has `pageNumber` (1-based), not `pageIndex`.
+            // Using pageIndex was causing an error as it was undefined.
+            const currentPageIndex = pageData.pageNumber - 1;
 
             if (orderNumber && orderToDocMap.has(orderNumber)) {
                 const docNumber = orderToDocMap.get(orderNumber)!;
@@ -83,7 +86,7 @@ const sortRetailPdfFlow = ai.defineFlow(
                 console.warn(`Could not find order number or mapping for page ${currentPageIndex + 1}.`);
                 unmappedPages.push(currentPageIndex);
             }
-            return ""; // we don't need to return any text from render_page
+            return ""; // We don't need to return any text, we are just using this to iterate
         });
     }
 
