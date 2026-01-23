@@ -167,9 +167,13 @@ export default function ReporteVentaVerdePage() {
     
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
     const reportElements = Array.from(pdfContentRef.current.children);
     let successfulPages = 0;
     
+    const margin = 5; // 5mm
+    const imageWidth = pdfWidth - (margin * 2);
+
     for (let i = 0; i < reportElements.length; i++) {
       if (cancelPdfGeneration.current) {
         break;
@@ -185,8 +189,14 @@ export default function ReporteVentaVerdePage() {
             }
   
             const imgProps = pdf.getImageProperties(imgData);
-            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+            const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
+            
+            let imageY = margin;
+            if (imageHeight < pdfHeight - (margin * 2)) {
+                imageY = (pdfHeight - imageHeight) / 2;
+            }
+
+            pdf.addImage(imgData, 'JPEG', margin, imageY, imageWidth, imageHeight);
             successfulPages++;
             setProgress(((i + 1) / reportElements.length) * 100);
             
