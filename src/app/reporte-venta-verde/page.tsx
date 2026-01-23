@@ -441,7 +441,7 @@ export default function ReporteVentaVerdePage() {
                     Haz clic en <strong>Ejecutar</strong> (o presiona F8).
                 </li>
                 <li>
-                    Una vez que se muestren los resultados, ve al menú <strong>Exportar > Hoja de Cálculo</strong>.
+                    Una vez que se muestren los resultados, ve al menú <strong>Exportar &gt; Hoja de Cálculo</strong>.
                 </li>
                 <li>
                     Guarda el archivo en formato Excel, asígnale un nombre descriptivo y ¡listo! Ya puedes subirlo a esta herramienta.
