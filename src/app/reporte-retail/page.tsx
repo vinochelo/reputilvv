@@ -138,32 +138,34 @@ export default function ReporteRetailPage() {
         const loadingTask = pdfjs.getDocument({ data: pdfBufferForRead });
         const pdfDocument = await loadingTask.promise;
         
-        const ebelnToPageIndex = new Map<string, number>();
+        const ebelnToPageIndices = new Map<string, number[]>();
         const allEbelnsFromExcel = [...new Set(processedData.map(p => p.ebeln))];
 
+        const pageOwner: { [pageIndex: number]: string } = {};
         for (let i = 0; i < pdfDocument.numPages; i++) {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
-            
             const numericText = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
 
-            let foundEbeln: string | null = null;
             for (const ebeln of allEbelnsFromExcel) {
                 if (numericText.includes(ebeln)) {
-                     // Make sure we don't map the same page to multiple ebelns
-                    if (!Array.from(ebelnToPageIndex.values()).includes(i)) {
-                         foundEbeln = ebeln;
-                         break;
-                    }
+                    pageOwner[i] = ebeln;
+                    break; 
                 }
             }
-            
-            if (foundEbeln) {
-                ebelnToPageIndex.set(foundEbeln, i);
+        }
+        
+        for (let i = 0; i < pdfDocument.numPages; i++) {
+            const ownerEbeln = pageOwner[i];
+            if (ownerEbeln) {
+                if (!ebelnToPageIndices.has(ownerEbeln)) {
+                    ebelnToPageIndices.set(ownerEbeln, []);
+                }
+                ebelnToPageIndices.get(ownerEbeln)!.push(i);
             }
         }
 
-        if (ebelnToPageIndex.size === 0 && pdfDocument.numPages > 0) {
+        if (Object.keys(pageOwner).length === 0 && pdfDocument.numPages > 0) {
              const firstPage = await pdfDocument.getPage(1);
              const textContent = await firstPage.getTextContent();
              const rawText = textContent.items.map((item: any) => item.str).join(' ');
@@ -175,24 +177,28 @@ export default function ReporteRetailPage() {
 
         // 4. Create new PDF with sorted pages
         const finalPageIndices: number[] = [];
-        const usedPageIndices = new Set<number>();
+        const usedEbelns = new Set<string>();
         
         for (const data of processedData) {
             const ebeln = data.ebeln;
-            const pageIndex = ebelnToPageIndex.get(ebeln);
-            if (pageIndex !== undefined) {
-                 if (!usedPageIndices.has(pageIndex)) {
-                    finalPageIndices.push(pageIndex);
-                    usedPageIndices.add(pageIndex);
-                }
+            
+            if (usedEbelns.has(ebeln)) {
+                continue;
+            }
+
+            const pageIndicesForEbeln = ebelnToPageIndices.get(ebeln);
+            
+            if (pageIndicesForEbeln && pageIndicesForEbeln.length > 0) {
+                finalPageIndices.push(...pageIndicesForEbeln);
+                usedEbelns.add(ebeln);
             }
         }
         
-        const unmappedPagesCount = pdfDocument.numPages - usedPageIndices.size;
+        const allMappedIndices = new Set(finalPageIndices);
+        const unmappedPagesCount = pdfDocument.numPages - allMappedIndices.size;
         
-        // Add all unmapped pages to the end
         for (let i = 0; i < pdfDocument.numPages; i++) {
-            if (!usedPageIndices.has(i)) {
+            if (!allMappedIndices.has(i)) {
                 finalPageIndices.push(i);
             }
         }
@@ -213,7 +219,7 @@ export default function ReporteRetailPage() {
 
         toast({
           title: "Proceso completado",
-          description: `Se reordenaron ${usedPageIndices.size} de ${pdfDocument.numPages} páginas. ${unmappedPagesCount} páginas no se pudieron mapear y se añadieron al final.`,
+          description: `Se reordenaron ${allMappedIndices.size} de ${pdfDocument.numPages} páginas. ${unmappedPagesCount} páginas no se pudieron mapear y se añadieron al final.`,
         });
 
     } catch (error: any) {
