@@ -62,13 +62,39 @@ export default function ReporteRetailPage() {
         const workbook = XLSX.read(excelBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet) as any[];
+        
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        let headerRowIndex = -1;
 
-        if (json.length === 0) {
-            throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
+        // Search for header row in the first 10 rows of the sheet
+        for(let R = range.s.r; R <= Math.min(range.e.r, 10); ++R) {
+            const rowValues = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell = worksheet[XLSX.utils.encode_cell({r:R, c:C})];
+                if (cell && cell.v) {
+                    rowValues.push(String(cell.v).trim().toLowerCase());
+                }
+            }
+            // Check if both headers are present in the row
+            if (rowValues.includes('ebeln') && rowValues.includes('belnr')) {
+                headerRowIndex = R;
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) {
+             throw new Error("No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo Excel. Asegúrate de que el archivo exportado de SAP contenga estas columnas.");
         }
         
-        const belnrHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'belnr' || h.trim().toLowerCase() === 'etiquetas de fila');
+        // Parse the sheet into JSON starting from the found header row
+        const json = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex }) as any[];
+
+        if (json.length === 0) {
+            throw new Error("El archivo Excel está vacío o no tiene el formato esperado después de encontrar los encabezados.");
+        }
+        
+        // Find the exact header names (case-insensitive)
+        const belnrHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'belnr');
         const ebelnHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
 
 
@@ -76,50 +102,59 @@ export default function ReporteRetailPage() {
             const foundHeaders = Object.keys(json[0]).join(', ');
              setDebugData({
                 rawText: `Columnas encontradas en el Excel: ${foundHeaders}`,
-                orders: ["Se esperaban los encabezados: 'BELNR' (o 'Etiquetas de fila') y 'EBELN'"],
+                orders: ["Se esperaban los encabezados: 'BELNR' y 'EBELN'"],
              })
-            throw new Error(`El archivo Excel debe contener las columnas 'BELNR' (o 'Etiquetas de fila') y 'EBELN'.`);
+            throw new Error(`El archivo Excel debe contener las columnas 'BELNR' y 'EBELN'.`);
         }
 
-        // 2. Process Excel: deduplicate rows and sort by EBELN
-        const uniqueEbelns = new Map<string, { belnr: string, ebeln: string }>();
+        // 2. Process Excel: deduplicate rows and sort by BELNR
+        const uniquePairs = new Map<string, { belnr: string, ebeln: string }>();
         json.forEach((row: any) => {
             const belnr = String(row[belnrHeader]).trim();
             const ebeln = String(row[ebelnHeader]).trim();
             if (belnr && ebeln) {
-                // Using EBELN as the key to ensure we have a unique list of EBELNs
-                uniqueEbelns.set(ebeln, { belnr, ebeln });
+                // Use a composite key to ensure uniqueness of the belnr-ebeln pair
+                const key = `${belnr}-${ebeln}`;
+                if (!uniquePairs.has(key)) {
+                    uniquePairs.set(key, { belnr, ebeln });
+                }
             }
         });
 
-        let processedData = Array.from(uniqueEbelns.values());
-        processedData.sort((a, b) => a.ebeln.localeCompare(b.ebeln, undefined, { numeric: true }));
-        const sortedEbelns = processedData.map(p => p.ebeln);
+        let processedData = Array.from(uniquePairs.values());
+        // Sort by BELNR, then EBELN as a secondary sort
+        processedData.sort((a, b) => {
+            const belnrCompare = a.belnr.localeCompare(b.belnr, undefined, { numeric: true });
+            if (belnrCompare !== 0) return belnrCompare;
+            return a.ebeln.localeCompare(b.ebeln, undefined, { numeric: true });
+        });
         
-        if (sortedEbelns.length === 0) {
-            throw new Error("No se encontraron valores de 'EBELN' válidos para procesar en el Excel.");
+        if (processedData.length === 0) {
+            throw new Error("No se encontraron valores de 'EBELN' y 'BELNR' válidos para procesar en el Excel.");
         }
         
         // 3. Read PDF and map pages to EBELN values
-        const pdfBuffer = await pdfFile.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
+        const pdfBufferForRead = await pdfFile.arrayBuffer();
+        const loadingTask = pdfjs.getDocument({ data: pdfBufferForRead });
         const pdfDocument = await loadingTask.promise;
         
         const ebelnToPageIndex = new Map<string, number>();
-        const allEbelnsFromExcel = Array.from(uniqueEbelns.keys());
+        const allEbelnsFromExcel = [...new Set(processedData.map(p => p.ebeln))];
 
         for (let i = 0; i < pdfDocument.numPages; i++) {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
-            const pageText = textContent.items.map((item: any) => item.str).join('');
-            const numericText = pageText.replace(/\D/g, '');
+            const numericText = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
 
             let foundEbeln: string | null = null;
             for (const ebeln of allEbelnsFromExcel) {
                 if (numericText.includes(ebeln)) {
-                    foundEbeln = ebeln;
-                    break;
+                     // Make sure we don't map the same page to multiple ebelns
+                    if (!Array.from(ebelnToPageIndex.values()).includes(i)) {
+                         foundEbeln = ebeln;
+                         break;
+                    }
                 }
             }
             
@@ -142,11 +177,14 @@ export default function ReporteRetailPage() {
         const finalPageIndices: number[] = [];
         const usedPageIndices = new Set<number>();
         
-        for (const ebeln of sortedEbelns) {
+        for (const data of processedData) {
+            const ebeln = data.ebeln;
             const pageIndex = ebelnToPageIndex.get(ebeln);
             if (pageIndex !== undefined) {
-                finalPageIndices.push(pageIndex);
-                usedPageIndices.add(pageIndex);
+                 if (!usedPageIndices.has(pageIndex)) {
+                    finalPageIndices.push(pageIndex);
+                    usedPageIndices.add(pageIndex);
+                }
             }
         }
         
@@ -159,16 +197,14 @@ export default function ReporteRetailPage() {
             }
         }
         
-        const pdfBufferForPdfLib = await pdfFile.arrayBuffer(); // Re-read buffer
-        const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
+        const pdfBufferForWrite = await pdfFile.arrayBuffer();
+        const originalPdf = await PDFDocument.load(pdfBufferForWrite);
         const sortedPdf = await PDFDocument.create();
         
-        for (const pageIndex of finalPageIndices) {
-            if (pageIndex < originalPdf.getPageCount()) {
-                const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
-                sortedPdf.addPage(copiedPage);
-            }
-        }
+        const copiedPages = await sortedPdf.copyPages(originalPdf, finalPageIndices);
+        copiedPages.forEach((page) => {
+            sortedPdf.addPage(page);
+        });
 
         const sortedPdfBytes = await sortedPdf.save();
         const blob = new Blob([sortedPdfBytes], { type: "application/pdf" });
@@ -217,7 +253,7 @@ export default function ReporteRetailPage() {
           Reportes de Retail
         </h1>
         <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
-          Sube un PDF y un Excel. La herramienta procesará el Excel, lo ordenará por 'EBELN' y luego reordenará tu PDF para que coincida con ese orden.
+          Sube un PDF y un Excel. La herramienta procesará el Excel, lo ordenará y luego reordenará tu PDF para que coincida con ese orden.
         </p>
       </div>
 
@@ -378,7 +414,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">La Herramienta Procesa</h4>
             <p className="text-foreground/80">
-              La aplicación lee tu Excel, elimina duplicados y lo ordena por 'EBELN'. Luego, busca cada 'EBELN' en tu PDF para saber cómo reordenar las páginas.
+              La aplicación lee tu Excel, elimina duplicados y lo ordena. Luego, busca cada 'EBELN' en tu PDF para saber cómo reordenar las páginas.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
@@ -387,7 +423,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Descarga el PDF Ordenado</h4>
             <p className="text-foreground/80">
-              Se genera un nuevo archivo PDF con todas las páginas reordenadas secuencialmente según el orden de la columna 'EBELN' de tu Excel.
+              Se genera un nuevo archivo PDF con todas las páginas reordenadas secuencialmente según el orden de tu Excel.
             </p>
           </div>
         </div>
@@ -395,4 +431,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
