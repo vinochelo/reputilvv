@@ -178,7 +178,7 @@ export default function ReporteVentaVerdePage() {
       if (reportElement) {
         try {
             const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/png', 1.0); 
+            const imgData = canvas.toDataURL('image/jpeg', 0.95); 
             
             if (i > 0) {
               pdf.addPage();
@@ -186,7 +186,7 @@ export default function ReporteVentaVerdePage() {
   
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
             successfulPages++;
             setProgress(((i + 1) / reportElements.length) * 100);
             
@@ -441,7 +441,7 @@ export default function ReporteVentaVerdePage() {
                     Haz clic en <strong>Ejecutar</strong> (o presiona F8).
                 </li>
                 <li>
-                    Una vez que se muestren los resultados, ve al menú <strong>Exportar &gt; Hoja de Cálculo</strong>.
+                    Una vez que se muestren los resultados, ve al menú <strong>Exportar > Hoja de Cálculo</strong>.
                 </li>
                 <li>
                     Guarda el archivo en formato Excel, asígnale un nombre descriptivo y ¡listo! Ya puedes subirlo a esta herramienta.
