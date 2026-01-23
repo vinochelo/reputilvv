@@ -68,7 +68,7 @@ export default function ReporteRetailPage() {
             throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
         }
         
-        const belnrHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'etiquetas de fila');
+        const belnrHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'belnr' || h.trim().toLowerCase() === 'etiquetas de fila');
         const ebelnHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
 
 
@@ -76,9 +76,9 @@ export default function ReporteRetailPage() {
             const foundHeaders = Object.keys(json[0]).join(', ');
              setDebugData({
                 rawText: `Columnas encontradas en el Excel: ${foundHeaders}`,
-                orders: ["Se esperaban los encabezados: 'Etiquetas de fila' y 'EBELN'"],
+                orders: ["Se esperaban los encabezados: 'BELNR' (o 'Etiquetas de fila') y 'EBELN'"],
              })
-            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' y 'EBELN'.`);
+            throw new Error(`El archivo Excel debe contener las columnas 'BELNR' (o 'Etiquetas de fila') y 'EBELN'.`);
         }
 
         // 2. Process Excel: deduplicate rows and sort by EBELN
@@ -369,7 +369,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Sube tus Archivos</h4>
             <p className="text-foreground/80">
-              Selecciona el PDF y el Excel extraído de SAP. El Excel debe tener las columnas 'Etiquetas de fila' y 'EBELN'.
+              Selecciona el PDF y el Excel extraído de SAP. El Excel debe tener las columnas 'BELNR' y 'EBELN'.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
@@ -395,3 +395,4 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
