@@ -167,7 +167,6 @@ export default function ReporteVentaVerdePage() {
     
     const pdf = new jsPDF('l', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
     const reportElements = Array.from(pdfContentRef.current.children);
     let successfulPages = 0;
     
@@ -191,10 +190,7 @@ export default function ReporteVentaVerdePage() {
             const imgProps = pdf.getImageProperties(imgData);
             const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
             
-            let imageY = margin;
-            if (imageHeight < pdfHeight - (margin * 2)) {
-                imageY = (pdfHeight - imageHeight) / 2;
-            }
+            const imageY = margin;
 
             pdf.addImage(imgData, 'JPEG', margin, imageY, imageWidth, imageHeight);
             successfulPages++;
@@ -357,7 +353,7 @@ export default function ReporteVentaVerdePage() {
                 {processedData.map((group) => (
                     <div key={group.n_doc} className="p-4 bg-white text-black">
                       <header className="mb-2">
-                          <h2 className="font-bold text-primary text-base">Reporte utilidad venta en verde</h2>
+                          <h2 className="text-primary text-base">Reporte utilidad venta en verde</h2>
                       </header>
                       <Table className="border-collapse text-[8px]">
                           <TableHeader>
