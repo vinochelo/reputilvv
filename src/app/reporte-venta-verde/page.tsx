@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -23,6 +23,7 @@ export default function ReporteVentaVerdePage() {
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelPdfGeneration = useRef(false);
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
@@ -161,6 +162,7 @@ export default function ReporteVentaVerdePage() {
   
     setPdfGenerationStatus('loading');
     setProgress(0);
+    cancelPdfGeneration.current = false;
     await new Promise(resolve => setTimeout(resolve, 50));
     
     const pdf = new jsPDF('l', 'mm', 'a4');
@@ -169,6 +171,9 @@ export default function ReporteVentaVerdePage() {
     let successfulPages = 0;
     
     for (let i = 0; i < reportElements.length; i++) {
+      if (cancelPdfGeneration.current) {
+        break;
+      }
       const reportElement = reportElements[i] as HTMLElement;
       if (reportElement) {
         try {
@@ -195,6 +200,15 @@ export default function ReporteVentaVerdePage() {
             });
         }
       }
+    }
+
+    if (cancelPdfGeneration.current) {
+      setPdfGenerationStatus('idle');
+      setProgress(0);
+      toast({
+        title: "Generación de PDF cancelada",
+      });
+      return;
     }
   
     try {
@@ -224,6 +238,10 @@ export default function ReporteVentaVerdePage() {
         setPdfGenerationStatus('idle');
         setProgress(0);
     }
+  };
+
+  const handleCancelPdfGeneration = () => {
+    cancelPdfGeneration.current = true;
   };
   
   const resetState = () => {
@@ -289,7 +307,7 @@ export default function ReporteVentaVerdePage() {
                     <CardTitle className="font-headline text-2xl">Previsualización del Reporte</CardTitle>
                     <CardDescription>Archivo: {fileName}</CardDescription>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={resetState} disabled={pdfGenerationStatus === 'loading'}>
                       <FileX2 className="mr-2 h-4 w-4" />
                       Cargar Otro
@@ -308,6 +326,12 @@ export default function ReporteVentaVerdePage() {
                          pdfGenerationStatus === 'success' ? '¡Generado! Descargar de Nuevo' : 
                          'Descargar PDF'}
                       </Button>
+                      {pdfGenerationStatus === 'loading' && (
+                        <Button variant="destructive" size="lg" onClick={handleCancelPdfGeneration}>
+                            <XCircle className="mr-2 h-5 w-5" />
+                            Cancelar
+                        </Button>
+                      )}
                 </div>
             </CardHeader>
             <CardContent>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { FileText, Building, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const tools = [
   {
@@ -15,6 +16,12 @@ const tools = [
     title: 'Reportes de Retail',
     description: 'Analiza y visualiza datos de ventas de retail.',
     href: '/reporte-retail',
+    icon: Building,
+  },
+  {
+    title: 'Reportes de Retail (Respaldo)',
+    description: 'Método alternativo para procesar reportes en caso de errores.',
+    href: 'https://reportesrespaldo.vercel.app/',
     icon: Building,
   },
   {
@@ -34,6 +41,7 @@ const tools = [
     description: 'Nueva versión en desarrollo para gestionar retenciones con IA.',
     href: '/control-retenciones-beta',
     icon: ShieldCheck,
+    status: 'beta',
   },
 ];
 
@@ -68,8 +76,12 @@ export default function Home() {
           >
             <Card className="h-full flex flex-col p-8 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl rounded-2xl border hover:border-primary/50">
               <div className="flex-grow">
-                <div className="bg-primary/10 p-4 rounded-xl self-start inline-block mb-6">
-                  <tool.icon className="w-8 h-8 text-primary" />
+                <div className={cn("bg-primary/10 p-4 rounded-xl self-start inline-block mb-6", {
+                  "bg-destructive/10": tool.status === 'beta',
+                })}>
+                  <tool.icon className={cn("w-8 h-8 text-primary", {
+                    "text-destructive": tool.status === 'beta',
+                  })} />
                 </div>
                 <h2 className="font-headline text-2xl font-semibold">{tool.title}</h2>
                 <p className="mt-2 text-base text-foreground/80">{tool.description}</p>
