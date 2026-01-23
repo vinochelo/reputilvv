@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils';
 const tools = [
   {
     title: 'Reportes de venta en verde',
-    description: 'Genera PDFs de utilidad a partir de archivos Excel.',
+    description: 'Genera PDFs de reportes de utilidad Venta en Verde a partir del resumen en Excel.',
     href: '/reporte-venta-verde',
     icon: FileText,
   },
   {
     title: 'Reportes de Retail',
-    description: 'Analiza y visualiza datos de ventas de retail.',
+    description: 'Genera PDFs de reportes de utilidad Retail con datos de SAP.',
     href: '/reporte-retail',
     icon: Building,
   },
@@ -26,7 +26,7 @@ const tools = [
   },
   {
     title: 'Control de retenciones',
-    description: 'Gestiona y controla las retenciones fiscales.',
+    description: 'Seguimiento de retenciones anuladas',
     href: 'https://extractor-kohl.vercel.app/',
     icon: ShieldCheck,
   },
