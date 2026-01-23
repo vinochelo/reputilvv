@@ -19,12 +19,6 @@ const tools = [
     icon: Building,
   },
   {
-    title: 'Reportes de Retail (Respaldo)',
-    description: 'Método alternativo para procesar reportes en caso de errores.',
-    href: 'https://reportesrespaldo.vercel.app/',
-    icon: Building,
-  },
-  {
     title: 'Envío correos en masa',
     description: 'Envía correos personalizados a una lista de contactos.',
     href: 'https://correos-sigma.vercel.app/',
@@ -42,6 +36,12 @@ const tools = [
     href: '/control-retenciones-beta',
     icon: ShieldCheck,
     status: 'beta',
+  },
+  {
+    title: 'Reportes de Retail (Respaldo)',
+    description: 'Método alternativo para procesar reportes en caso de errores.',
+    href: 'https://reportesrespaldo.vercel.app/',
+    icon: Building,
   },
 ];
 
