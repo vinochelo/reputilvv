@@ -68,97 +68,106 @@ export default function ReporteRetailPage() {
             throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
         }
         
-        const sortHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'etiquetas de fila');
-        const searchHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
+        const belnrHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'etiquetas de fila');
+        const ebelnHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
 
 
-        if (!sortHeader || !searchHeader) {
+        if (!belnrHeader || !ebelnHeader) {
             const foundHeaders = Object.keys(json[0]).join(', ');
              setDebugData({
                 rawText: `Columnas encontradas en el Excel: ${foundHeaders}`,
                 orders: ["Se esperaban los encabezados: 'Etiquetas de fila' y 'EBELN'"],
              })
-            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' (para ordenar) y 'EBELN' (para buscar).`);
+            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' y 'EBELN'.`);
         }
 
-        const searchToSortMap = new Map<string, number>();
+        // 2. Process Excel: deduplicate rows and sort by EBELN
+        const uniqueEbelns = new Map<string, { belnr: string, ebeln: string }>();
         json.forEach((row: any) => {
-            const searchValue = String(row[searchHeader]).trim();
-            const sortValue = Number(String(row[sortHeader]).trim());
-            if (searchValue && !isNaN(sortValue)) {
-                searchToSortMap.set(searchValue, sortValue);
+            const belnr = String(row[belnrHeader]).trim();
+            const ebeln = String(row[ebelnHeader]).trim();
+            if (belnr && ebeln) {
+                // Using EBELN as the key to ensure we have a unique list of EBELNs
+                uniqueEbelns.set(ebeln, { belnr, ebeln });
             }
         });
+
+        let processedData = Array.from(uniqueEbelns.values());
+        processedData.sort((a, b) => a.ebeln.localeCompare(b.ebeln, undefined, { numeric: true }));
+        const sortedEbelns = processedData.map(p => p.ebeln);
         
-        if (searchToSortMap.size === 0) {
-            throw new Error("No se encontró un mapeo válido de 'EBELN' a 'Etiquetas de fila' en el Excel.");
+        if (sortedEbelns.length === 0) {
+            throw new Error("No se encontraron valores de 'EBELN' válidos para procesar en el Excel.");
         }
         
-        // 2. Read PDF and find search values (EBELN)
+        // 3. Read PDF and map pages to EBELN values
         const pdfBuffer = await pdfFile.arrayBuffer();
         const loadingTask = pdfjs.getDocument({ data: pdfBuffer });
         const pdfDocument = await loadingTask.promise;
         
-        const pageInfo: { pageIndex: number; sortValue: number }[] = [];
-        const unmappedPages: number[] = [];
-        
-        const excelSearchValues = Array.from(searchToSortMap.keys());
+        const ebelnToPageIndex = new Map<string, number>();
+        const allEbelnsFromExcel = Array.from(uniqueEbelns.keys());
 
         for (let i = 0; i < pdfDocument.numPages; i++) {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
             const pageText = textContent.items.map((item: any) => item.str).join('');
+            const numericText = pageText.replace(/\D/g, '');
 
-            let foundSearchValue: string | null = null;
-            
-            const foundExcelValue = excelSearchValues.find(excelValue => pageText.includes(excelValue));
-
-            if (foundExcelValue) {
-                 foundSearchValue = foundExcelValue;
+            let foundEbeln: string | null = null;
+            for (const ebeln of allEbelnsFromExcel) {
+                if (numericText.includes(ebeln)) {
+                    foundEbeln = ebeln;
+                    break;
+                }
             }
             
-            if (foundSearchValue && searchToSortMap.has(foundSearchValue)) {
-                const sortValue = searchToSortMap.get(foundSearchValue)!;
-                pageInfo.push({ pageIndex: i, sortValue });
-            } else {
-                unmappedPages.push(i);
+            if (foundEbeln) {
+                ebelnToPageIndex.set(foundEbeln, i);
             }
         }
 
-        if (pageInfo.length === 0 && pdfDocument.numPages > 0) {
+        if (ebelnToPageIndex.size === 0 && pdfDocument.numPages > 0) {
              const firstPage = await pdfDocument.getPage(1);
              const textContent = await firstPage.getTextContent();
              const rawText = textContent.items.map((item: any) => item.str).join(' ');
              setDebugData({
                  rawText: rawText,
-                 orders: excelSearchValues, // These are the EBELN values
+                 orders: allEbelnsFromExcel,
              });
-            toast({
-                title: "No se pudo ordenar",
-                description: `Se ordenaron 0 de ${pdfDocument.numPages} páginas. Revisa la información de depuración.`,
-                variant: "destructive",
-            });
-            setLoading(false);
-            return;
         }
 
-        // 3. Sort pages based on sort value (from 'Etiquetas de fila')
-        pageInfo.sort((a, b) => a.sortValue - b.sortValue);
-        
-        const sortedPageIndices = [
-            ...pageInfo.map(p => p.pageIndex),
-            ...unmappedPages
-        ];
-        
         // 4. Create new PDF with sorted pages
+        const finalPageIndices: number[] = [];
+        const usedPageIndices = new Set<number>();
+        
+        for (const ebeln of sortedEbelns) {
+            const pageIndex = ebelnToPageIndex.get(ebeln);
+            if (pageIndex !== undefined) {
+                finalPageIndices.push(pageIndex);
+                usedPageIndices.add(pageIndex);
+            }
+        }
+        
+        const unmappedPagesCount = pdfDocument.numPages - usedPageIndices.size;
+        
+        // Add all unmapped pages to the end
+        for (let i = 0; i < pdfDocument.numPages; i++) {
+            if (!usedPageIndices.has(i)) {
+                finalPageIndices.push(i);
+            }
+        }
+        
         const pdfBufferForPdfLib = await pdfFile.arrayBuffer(); // Re-read buffer
         const originalPdf = await PDFDocument.load(pdfBufferForPdfLib);
         const sortedPdf = await PDFDocument.create();
         
-        for (const pageIndex of sortedPageIndices) {
-            const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
-            sortedPdf.addPage(copiedPage);
+        for (const pageIndex of finalPageIndices) {
+            if (pageIndex < originalPdf.getPageCount()) {
+                const [copiedPage] = await sortedPdf.copyPages(originalPdf, [pageIndex]);
+                sortedPdf.addPage(copiedPage);
+            }
         }
 
         const sortedPdfBytes = await sortedPdf.save();
@@ -168,7 +177,7 @@ export default function ReporteRetailPage() {
 
         toast({
           title: "Proceso completado",
-          description: `Se reordenaron ${pageInfo.length} de ${pdfDocument.numPages} páginas. ${unmappedPages.length} páginas no se pudieron mapear y se añadieron al final.`,
+          description: `Se reordenaron ${usedPageIndices.size} de ${pdfDocument.numPages} páginas. ${unmappedPagesCount} páginas no se pudieron mapear y se añadieron al final.`,
         });
 
     } catch (error: any) {
@@ -208,7 +217,7 @@ export default function ReporteRetailPage() {
           Reportes de Retail
         </h1>
         <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
-          Sube un PDF y un Excel. La herramienta buscará el valor 'EBELN' del Excel en cada página del PDF y luego ordenará las páginas según el valor 'Etiquetas de fila'.
+          Sube un PDF y un Excel. La herramienta procesará el Excel, lo ordenará por 'EBELN' y luego reordenará tu PDF para que coincida con ese orden.
         </p>
       </div>
 
@@ -230,7 +239,7 @@ export default function ReporteRetailPage() {
 
           <div className="flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg">
             <FileSpreadsheet className="w-12 h-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">2. Sube el mapeo en Excel</p>
+            <p className="text-lg font-semibold text-foreground">2. Sube el reporte de Excel</p>
             <Button variant="outline" onClick={() => excelInputRef.current?.click()}>
               Seleccionar Excel
             </Button>
@@ -259,12 +268,12 @@ export default function ReporteRetailPage() {
           <CardHeader>
             <CardTitle>Información de Depuración</CardTitle>
             <CardDescription>
-              No se pudo ordenar ninguna página o hubo un error. Aquí está la información relevante para el diagnóstico.
+              No se pudo ordenar ninguna página. Revisa que el 'EBELN' del Excel exista en el PDF.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-semibold mb-2">Texto Extraído de la Primera Página del PDF (o de columnas del Excel):</h4>
+              <h4 className="font-semibold mb-2">Texto Extraído de la Primera Página del PDF:</h4>
               <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[300px] overflow-auto">
                 {debugData.rawText}
               </pre>
@@ -333,28 +342,12 @@ export default function ReporteRetailPage() {
                       </ul>
                     </li>
                     <li>
-                      <strong>Seleccionar Campos</strong>:
+                      <strong>Exportar a Excel</strong>:
                       <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>Haz clic derecho sobre los datos, elige <strong>"Selección de campo"</strong>, desmarca todo y luego selecciona solo <strong>`EBELN`</strong>, <strong>`GJAHR`</strong> y <strong>`BELNR`</strong>.</li>
-                      </ul>
-                    </li>
-                    <li>
-                      <strong>Exportar a HTML/XLS</strong>:
-                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>Ve a <strong>Sistema &gt; Lista &gt; Grabar &gt; Grabar</strong>.</li>
-                        <li>Elige <strong>"Formato HTML"</strong> y continúa.</li>
-                        <li>Nombra el fichero asegurándote de que termine en <strong>`.xls`</strong> y guárdalo.</li>
-                      </ul>
-                    </li>
-                    <li>
-                      <strong>Crear Tabla Dinámica en Excel</strong>:
-                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>Abre el archivo `.xls` (ignora las advertencias de formato) y guárdalo como <strong>Libro de Excel (.xlsx)</strong>.</li>
-                        <li>Inserta una <strong>Tabla Dinámica</strong> con los datos.</li>
-                        <li>Arrastra a <strong>Filas</strong>: primero <strong>`BELNR`</strong>, y debajo <strong>`EBELN`</strong>.</li>
-                        <li>En la pestaña <strong>Diseño</strong> (de la tabla dinámica), ve a <strong>Diseño de Informe</strong> y elige <strong>"Mostrar en formato Tabular"</strong>.</li>
-                        <li>En la misma pestaña, ve a <strong>Subtotales</strong> y elige <strong>"No mostrar subtotales"</strong>.</li>
-                        <li>Tu tabla final debe tener dos columnas: "Etiquetas de fila" (que es `BELNR`) y "EBELN". Guarda este archivo. Este será el Excel que subirás.</li>
+                        <li>Asegúrate de que las columnas `BELNR` y `EBELN` estén visibles.</li>
+                        <li>Ve a <strong>Sistema &gt; Lista &gt; Grabar &gt; Fichero local</strong>.</li>
+                        <li>Elige la opción <strong>"Hoja de cálculo"</strong>.</li>
+                        <li>Guarda el archivo. Este será el archivo Excel que subirás a la herramienta. <strong>No necesitas crear una tabla dinámica.</strong></li>
                       </ul>
                     </li>
                   </ol>
@@ -376,16 +369,16 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Sube tus Archivos</h4>
             <p className="text-foreground/80">
-              Selecciona el PDF y el Excel. El Excel debe tener las columnas 'Etiquetas de fila' y 'EBELN'.
+              Selecciona el PDF y el Excel extraído de SAP. El Excel debe tener las columnas 'Etiquetas de fila' y 'EBELN'.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
               <span className="text-2xl font-bold">2</span>
             </div>
-            <h4 className="text-xl font-semibold text-foreground">El Navegador Procesa</h4>
+            <h4 className="text-xl font-semibold text-foreground">La Herramienta Procesa</h4>
             <p className="text-foreground/80">
-              Tu navegador lee el número 'EBELN' de cada página del PDF, lo busca en tu Excel y usa 'Etiquetas de fila' para saber cómo ordenar.
+              La aplicación lee tu Excel, elimina duplicados y lo ordena por 'EBELN'. Luego, busca cada 'EBELN' en tu PDF para saber cómo reordenar las páginas.
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2">
@@ -394,7 +387,7 @@ export default function ReporteRetailPage() {
             </div>
             <h4 className="text-xl font-semibold text-foreground">Descarga el PDF Ordenado</h4>
             <p className="text-foreground/80">
-              Se genera un nuevo archivo PDF con todas las páginas reordenadas secuencialmente según el valor de 'Etiquetas de fila'.
+              Se genera un nuevo archivo PDF con todas las páginas reordenadas secuencialmente según el orden de la columna 'EBELN' de tu Excel.
             </p>
           </div>
         </div>
