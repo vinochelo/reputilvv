@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
-import { ArrowLeft, BrainCircuit, File as FileIcon, FileSpreadsheet, Loader2, FileCheck2 } from 'lucide-react';
+import { ArrowLeft, Shuffle, File as FileIcon, FileSpreadsheet, Loader2, FileCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { PDFDocument } from 'pdf-lib';
@@ -259,9 +259,6 @@ export default function ReporteRetailPage() {
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
           Reportes de Retail
         </h1>
-        <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
-          Sube un PDF y un Excel. La herramienta procesará el Excel, lo ordenará y luego reordenará tu PDF para que coincida con ese orden.
-        </p>
       </div>
 
       <Card className="max-w-4xl mx-auto shadow-lg">
@@ -321,7 +318,7 @@ export default function ReporteRetailPage() {
                 </div>
             ) : (
                 <Button size="lg" onClick={handleProcess} disabled={!pdfFile || !excelFile}>
-                  <BrainCircuit className="mr-2 h-5 w-5" />
+                  <Shuffle className="mr-2 h-5 w-5" />
                   Ordenar PDF
                 </Button>
             )}
