@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
@@ -11,6 +10,8 @@ import * as pdfjs from 'pdfjs-dist';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
 
 // This is required for pdfjs-dist to work in the browser
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -67,27 +68,23 @@ export default function ReporteRetailPage() {
             throw new Error("El archivo Excel está vacío o no tiene el formato esperado.");
         }
         
-        // Find headers, being flexible with whitespace
-        // The value to SORT BY is "Etiquetas de fila" (column A)
         const sortHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'etiquetas de fila');
-        
-        // The value to SEARCH FOR IN THE PDF is "EBELN" (column B)
         const searchHeader = Object.keys(json[0]).find(h => h.trim().toLowerCase() === 'ebeln');
+
 
         if (!sortHeader || !searchHeader) {
             const foundHeaders = Object.keys(json[0]).join(', ');
              setDebugData({
                 rawText: `Columnas encontradas en el Excel: ${foundHeaders}`,
-                orders: ["Se esperaban: 'Etiquetas de fila', 'EBELN'"],
+                orders: ["Se esperaban los encabezados: 'Etiquetas de fila' y 'EBELN'"],
              })
-            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' y 'EBELN'.`);
+            throw new Error(`El archivo Excel debe contener las columnas 'Etiquetas de fila' (para ordenar) y 'EBELN' (para buscar).`);
         }
 
-        // Map: Search Value (EBELN from col B) -> Sort Value (Etiquetas de fila from col A)
         const searchToSortMap = new Map<string, number>();
         json.forEach((row: any) => {
             const searchValue = String(row[searchHeader]).trim();
-            const sortValue = Number(row[sortHeader]);
+            const sortValue = Number(String(row[sortHeader]).trim());
             if (searchValue && !isNaN(sortValue)) {
                 searchToSortMap.set(searchValue, sortValue);
             }
@@ -111,11 +108,11 @@ export default function ReporteRetailPage() {
             const page = await pdfDocument.getPage(i + 1);
             const textContent = await page.getTextContent();
             
-            const pageDigits = textContent.items.map((item: any) => item.str).join('').replace(/\D/g, '');
+            const pageText = textContent.items.map((item: any) => item.str).join('');
 
             let foundSearchValue: string | null = null;
             
-            const foundExcelValue = excelSearchValues.find(excelValue => pageDigits.includes(excelValue));
+            const foundExcelValue = excelSearchValues.find(excelValue => pageText.includes(excelValue));
 
             if (foundExcelValue) {
                  foundSearchValue = foundExcelValue;
@@ -129,15 +126,14 @@ export default function ReporteRetailPage() {
             }
         }
 
-        // If sorting failed, provide debug info
         if (pageInfo.length === 0 && pdfDocument.numPages > 0) {
-            const firstPage = await pdfDocument.getPage(1);
-            const textContent = await firstPage.getTextContent();
-            const rawText = textContent.items.map((item: any) => item.str).join(' ');
-            setDebugData({
-                rawText: rawText,
-                orders: excelSearchValues, // These are the EBELN values
-            });
+             const firstPage = await pdfDocument.getPage(1);
+             const textContent = await firstPage.getTextContent();
+             const rawText = textContent.items.map((item: any) => item.str).join(' ');
+             setDebugData({
+                 rawText: rawText,
+                 orders: excelSearchValues, // These are the EBELN values
+             });
             toast({
                 title: "No se pudo ordenar",
                 description: `Se ordenaron 0 de ${pdfDocument.numPages} páginas. Revisa la información de depuración.`,
@@ -282,6 +278,92 @@ export default function ReporteRetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <section className="max-w-4xl mx-auto mt-12">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="item-1">
+            <AccordionTrigger className="text-xl font-headline font-semibold text-primary hover:no-underline">
+              Instrucciones para obtener los archivos de SAP
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-6 pt-4 text-base">
+                <div>
+                  <h4 className="font-bold text-lg mb-3 text-foreground/90">Parte 1: Generar el Reporte en PDF</h4>
+                  <ol className="list-decimal list-inside space-y-4 text-foreground/80">
+                    <li>
+                      <strong>Transacción `MIR5`</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Ingresa, filtra y descarga las facturas según el rango de fechas, usuario y sociedad.</li>
+                        <li>Copia o exporta los <strong>números de documento (`BELNR`)</strong>, los necesitarás en el siguiente paso.</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Transacción `ZREP PEDIDOS`</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>En el campo de selección de "Facturas", pega todos los números de documento que obtuviste.</li>
+                        <li>Ejecuta el reporte (F8).</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Generar el PDF</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Haz clic en el icono de <strong>REPORTE</strong> (o presiona `Shift+F1`).</li>
+                        <li>En la ventana de impresión, elige la impresora <strong>"Microsoft Print to PDF"</strong>.</li>
+                        <li>Imprime y guarda el archivo. Este será el PDF que subirás a la herramienta.</li>
+                      </ul>
+                    </li>
+                  </ol>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="font-bold text-lg mb-3 text-foreground/90">Parte 2: Generar el Archivo Excel</h4>
+                  <ol className="list-decimal list-inside space-y-4 text-foreground/80">
+                    <li>
+                      <strong>Transacción `SE16`</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Ingresa a la transacción `SE16`, escribe la tabla <strong>`EKBE`</strong> y presiona Enter.</li>
+                        <li>Carga la variante: Menú <strong>Pasar a &gt; Variantes &gt; Traer...</strong> y selecciona <strong>`REVOC`</strong>.</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Filtrar Documentos</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>En el campo <strong>`BELNR`</strong>, usa la selección múltiple para pegar todos los números de documento de la `MIR5`.</li>
+                        <li>Ejecuta la selección (F8).</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Seleccionar Campos</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Haz clic derecho sobre los datos, elige <strong>"Selección de campo"</strong>, desmarca todo y luego selecciona solo <strong>`EBELN`</strong>, <strong>`GJAHR`</strong> y <strong>`BELNR`</strong>.</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Exportar a HTML/XLS</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Ve a <strong>Sistema &gt; Lista &gt; Grabar &gt; Grabar</strong>.</li>
+                        <li>Elige <strong>"Formato HTML"</strong> y continúa.</li>
+                        <li>Nombra el fichero asegurándote de que termine en <strong>`.xls`</strong> y guárdalo.</li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Crear Tabla Dinámica en Excel</strong>:
+                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
+                        <li>Abre el archivo `.xls` (ignora las advertencias de formato) y guárdalo como <strong>Libro de Excel (.xlsx)</strong>.</li>
+                        <li>Inserta una <strong>Tabla Dinámica</strong> con los datos.</li>
+                        <li>Arrastra a <strong>Filas</strong>: primero <strong>`BELNR`</strong>, y debajo <strong>`EBELN`</strong>.</li>
+                        <li>En la pestaña <strong>Diseño</strong> (de la tabla dinámica), ve a <strong>Diseño de Informe</strong> y elige <strong>"Mostrar en formato Tabular"</strong>.</li>
+                        <li>En la misma pestaña, ve a <strong>Subtotales</strong> y elige <strong>"No mostrar subtotales"</strong>.</li>
+                        <li>Tu tabla final debe tener dos columnas: "Etiquetas de fila" (que es `BELNR`) y "EBELN". Guarda este archivo. Este será el Excel que subirás.</li>
+                      </ul>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </section>
 
        <section className="mt-16 max-w-4xl mx-auto">
         <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
