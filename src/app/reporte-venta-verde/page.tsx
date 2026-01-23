@@ -154,6 +154,8 @@ export default function ReporteVentaVerdePage() {
       return;
     }
 
+    grouped.sort((a, b) => a.n_doc - b.n_doc);
+
     setProcessedData(grouped);
   };
 
@@ -353,7 +355,7 @@ export default function ReporteVentaVerdePage() {
                 {processedData.map((group) => (
                     <div key={group.n_doc} className="p-4 bg-white text-black">
                       <header className="mb-2">
-                          <h2 className="text-primary text-base">Reporte utilidad venta en verde</h2>
+                          <h2 className="text-primary text-base font-normal">Reporte utilidad venta en verde</h2>
                       </header>
                       <Table className="border-collapse text-[8px]">
                           <TableHeader>
@@ -492,4 +494,5 @@ export default function ReporteVentaVerdePage() {
       </section>
     </main>
   );
-}
+
+    
