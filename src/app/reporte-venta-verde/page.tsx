@@ -26,6 +26,13 @@ export default function ReporteVentaVerdePage() {
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
+    // Prioritize exact match
+    const exactKey = keys.find(key => key.trim().toLowerCase() === 'nº doc.');
+    if (exactKey && item[exactKey] !== null && item[exactKey] !== undefined) {
+        return item[exactKey];
+    }
+    
+    // Fallback to regex
     const docIdRegex = /n(º|°|ro\.?|umero)?\.?\s*doc/i;
     for (const key of keys) {
         if (docIdRegex.test(key.trim())) {
@@ -100,7 +107,7 @@ export default function ReporteVentaVerdePage() {
 
       if (!group) {
         group = {
-          n_doc: docId,
+          n_doc: docId as number,
           items: [],
           totalCantidad: 0,
           totalCostoTotal: 0,
@@ -380,6 +387,34 @@ export default function ReporteVentaVerdePage() {
           </Card>
         </div>
       )}
+
+      <section className="mt-16 max-w-4xl mx-auto">
+        <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
+          Instrucciones para obtener el Excel de SAP
+        </h3>
+        <div className="bg-muted/50 p-6 rounded-lg">
+            <ol className="list-decimal list-inside space-y-4 text-foreground/90">
+                <li>
+                    Ingresa a SAP y ejecuta la transacción <strong>ZMM_UTILIDAD_VV</strong>.
+                </li>
+                <li>
+                    En el campo de selección de fechas, coloca el <strong>rango de fechas</strong> correspondiente a las facturas que deseas procesar.
+                </li>
+                <li>
+                    En la sección <strong>"Número de documento"</strong>, especifica el rango de los documentos FI. Debes usar el primer y el último número de documento del período (ej: desde 52000xxxx0 hasta 52000xxxx9).
+                </li>
+                <li>
+                    Haz clic en <strong>Ejecutar</strong> (o presiona F8).
+                </li>
+                <li>
+                    Una vez que se muestren los resultados, ve al menú <strong>Exportar &gt; Hoja de Cálculo</strong>.
+                </li>
+                <li>
+                    Guarda el archivo en formato Excel, asígnale un nombre descriptivo y ¡listo! Ya puedes subirlo a esta herramienta.
+                </li>
+            </ol>
+        </div>
+      </section>
 
       <section className="mt-16 max-w-4xl mx-auto">
         <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
