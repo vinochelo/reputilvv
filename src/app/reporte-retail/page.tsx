@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
@@ -22,6 +23,7 @@ export default function ReporteRetailPage() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [processCompleted, setProcessCompleted] = useState(false);
   const [fileName, setFileName] = useState<{pdf: string | null, excel: string | null}>({ pdf: null, excel: null });
   const [debugData, setDebugData] = useState<{rawText: string, orders: string[]} | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +48,7 @@ export default function ReporteRetailPage() {
     if (type === 'excel') setExcelFile(file);
     setFileName(prev => ({ ...prev, [type]: file.name }));
     setDebugData(null);
+    setProcessCompleted(false);
   };
 
   const handleProcess = async () => {
@@ -56,6 +59,7 @@ export default function ReporteRetailPage() {
 
     setLoading(true);
     setDebugData(null);
+    setProcessCompleted(false);
     
     try {
         // 1. Read and parse Excel
@@ -222,6 +226,7 @@ export default function ReporteRetailPage() {
           title: "Proceso completado",
           description: `Se reordenaron ${allMappedIndices.size} de ${pdfDocument.numPages} páginas. ${unmappedPagesCount} páginas no se pudieron mapear y se añadieron al final.`,
         });
+        setProcessCompleted(true);
 
     } catch (error: any) {
       console.error("Error processing files:", error);
@@ -317,9 +322,14 @@ export default function ReporteRetailPage() {
                     <p className="text-sm text-muted-foreground">Esto puede tomar un momento.</p>
                 </div>
             ) : (
-                <Button size="lg" onClick={handleProcess} disabled={!pdfFile || !excelFile}>
-                  <Shuffle className="mr-2 h-5 w-5" />
-                  Ordenar PDF
+                <Button 
+                    size="lg" 
+                    onClick={handleProcess} 
+                    disabled={!pdfFile || !excelFile}
+                    className={cn(processCompleted && "bg-green-600 hover:bg-green-700")}
+                >
+                  {processCompleted ? <FileCheck2 className="mr-2 h-5 w-5" /> : <Shuffle className="mr-2 h-5 w-5" />}
+                  {processCompleted ? '¡Ordenado! Descargar de nuevo' : 'Ordenar PDF'}
                 </Button>
             )}
         </div>
