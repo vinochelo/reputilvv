@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from 'react';
-import { ArrowLeft, BrainCircuit, File as FileIcon, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, File as FileIcon, FileSpreadsheet, Loader2, FileCheck2 } from 'lucide-react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { PDFDocument } from 'pdf-lib';
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 // This is required for pdfjs-dist to work in the browser
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -269,24 +270,46 @@ export default function ReporteRetailPage() {
           <CardDescription>Sube los dos archivos requeridos para comenzar el proceso.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 grid md:grid-cols-2 gap-8">
-          <div className="flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg">
-            <FileIcon className="w-12 h-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">1. Sube el reporte en PDF</p>
+          <div className={cn(
+            "flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg transition-colors",
+            pdfFile ? "border-green-500 bg-green-50 dark:bg-green-500/10" : "border-input"
+          )}>
+            {pdfFile ? (
+              <FileCheck2 className="w-12 h-12 text-green-500" />
+            ) : (
+              <FileIcon className="w-12 h-12 text-primary" />
+            )}
+            <p className="text-lg font-semibold text-foreground text-center">
+              {pdfFile ? "PDF Cargado" : "1. Sube el reporte en PDF"}
+            </p>
+            <p className="text-sm text-muted-foreground h-5 text-center truncate max-w-full px-2" title={fileName.pdf ?? ''}>
+                {fileName.pdf}
+            </p>
             <Button variant="outline" onClick={() => pdfInputRef.current?.click()}>
-              Seleccionar PDF
+              {pdfFile ? "Cambiar PDF" : "Seleccionar PDF"}
             </Button>
             <input ref={pdfInputRef} type="file" className="hidden" onChange={(e) => handleFileChange(e, 'pdf')} accept="application/pdf" />
-            {fileName.pdf && <p className="text-sm text-muted-foreground">{fileName.pdf}</p>}
           </div>
 
-          <div className="flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg">
-            <FileSpreadsheet className="w-12 h-12 text-primary" />
-            <p className="text-lg font-semibold text-foreground">2. Sube el reporte de Excel</p>
+          <div className={cn(
+            "flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg transition-colors",
+            excelFile ? "border-green-500 bg-green-50 dark:bg-green-500/10" : "border-input"
+          )}>
+            {excelFile ? (
+              <FileCheck2 className="w-12 h-12 text-green-500" />
+            ) : (
+              <FileSpreadsheet className="w-12 h-12 text-primary" />
+            )}
+            <p className="text-lg font-semibold text-foreground text-center">
+              {excelFile ? "Excel Cargado" : "2. Sube el reporte de Excel"}
+            </p>
+            <p className="text-sm text-muted-foreground h-5 text-center truncate max-w-full px-2" title={fileName.excel ?? ''}>
+                {fileName.excel}
+            </p>
             <Button variant="outline" onClick={() => excelInputRef.current?.click()}>
-              Seleccionar Excel
+              {excelFile ? "Cambiar Excel" : "Seleccionar Excel"}
             </Button>
             <input ref={excelInputRef} type="file" className="hidden" onChange={(e) => handleFileChange(e, 'excel')} accept=".xlsx, .xls" />
-            {fileName.excel && <p className="text-sm text-muted-foreground">{fileName.excel}</p>}
           </div>
         </CardContent>
         <div className="p-6 pt-0 flex justify-center">
