@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
@@ -16,10 +16,10 @@ import Link from 'next/link';
 
 export default function ReporteVentaVerdePage() {
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
-  const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [pdfGenerationStatus, setPdfGenerationStatus] = useState<'idle' | 'loading' | 'success'>('idle');
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -159,7 +159,7 @@ export default function ReporteVentaVerdePage() {
   const handleDownloadPdf = async () => {
     if (!pdfContentRef.current) return;
   
-    setLoading(true);
+    setPdfGenerationStatus('loading');
     setProgress(0);
     await new Promise(resolve => setTimeout(resolve, 50));
     
@@ -200,16 +200,19 @@ export default function ReporteVentaVerdePage() {
     try {
       if (successfulPages > 0) {
         toast({
-          title: "Preparando descarga...",
-          description: "El archivo PDF se está compilando y se descargará en breve.",
+          title: "¡Éxito! PDF generado.",
+          description: "La descarga de tu archivo ha comenzado.",
         });
         pdf.save('reporte.pdf');
+        setPdfGenerationStatus('success');
       } else {
         toast({
             title: "No se generó el PDF",
             description: "No se pudo procesar ningún reporte.",
             variant: "destructive",
         });
+        setPdfGenerationStatus('idle');
+        setProgress(0);
       }
     } catch (e) {
         console.error("Error saving PDF:", e);
@@ -218,8 +221,7 @@ export default function ReporteVentaVerdePage() {
             description: "El documento es demasiado grande y no se pudo generar. Intenta con menos datos.",
             variant: "destructive",
         });
-    } finally {
-        setLoading(false);
+        setPdfGenerationStatus('idle');
         setProgress(0);
     }
   };
@@ -227,6 +229,8 @@ export default function ReporteVentaVerdePage() {
   const resetState = () => {
     setProcessedData(null);
     setFileName(null);
+    setPdfGenerationStatus('idle');
+    setProgress(0);
     if(fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -286,26 +290,32 @@ export default function ReporteVentaVerdePage() {
                     <CardDescription>Archivo: {fileName}</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={resetState} disabled={loading}>
+                    <Button variant="outline" onClick={resetState} disabled={pdfGenerationStatus === 'loading'}>
                       <FileX2 className="mr-2 h-4 w-4" />
                       Cargar Otro
                     </Button>
-                    <Button onClick={handleDownloadPdf} disabled={loading}>
-                      {loading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileDown className="mr-2 h-4 w-4" />
-                      )}
-                      {loading ? 'Generando...' : 'Descargar PDF'}
-                    </Button>
+                     <Button 
+                        size="lg" 
+                        onClick={handleDownloadPdf} 
+                        disabled={pdfGenerationStatus === 'loading'}
+                        className={pdfGenerationStatus === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}
+                      >
+                        {pdfGenerationStatus === 'loading' && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                        {pdfGenerationStatus === 'idle' && <FileDown className="mr-2 h-5 w-5" />}
+                        {pdfGenerationStatus === 'success' && <CheckCircle className="mr-2 h-5 w-5" />}
+                        
+                        {pdfGenerationStatus === 'loading' ? 'Generando...' : 
+                         pdfGenerationStatus === 'success' ? '¡Generado! Descargar de Nuevo' : 
+                         'Descargar PDF'}
+                      </Button>
                 </div>
             </CardHeader>
             <CardContent>
-                {loading && (
-                    <div className="space-y-2 mb-4">
-                        <Progress value={progress} />
-                        <p className="text-sm text-center text-muted-foreground">
-                            Generando PDF... {Math.round(progress)}%
+                {(pdfGenerationStatus === 'loading' || pdfGenerationStatus === 'success') && (
+                    <div className="space-y-2 mb-4 transition-all duration-300">
+                        <Progress value={progress} className="h-4" />
+                        <p className="text-base text-center font-semibold text-primary">
+                            {pdfGenerationStatus === 'loading' ? `Generando PDF... ${Math.round(progress)}%` : '¡Completado al 100%!'}
                         </p>
                     </div>
                 )}
