@@ -95,11 +95,11 @@ export default function Home() {
       <section className="bg-muted/30 dark:bg-muted/10 border-b">
         <div className="container mx-auto px-4 py-16 sm:py-24">
           <div className="text-center">
-            <div className="flex justify-center items-start gap-1 mb-8" aria-label="ETAFASHION RM">
+            <div className="flex justify-center items-baseline gap-1 mb-8" aria-label="ETAFASHION RM">
               <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-7xl">
+              <span className="font-headline font-bold text-primary text-3xl sm:text-4xl md:text-5xl">
                 RM
               </span>
             </div>
