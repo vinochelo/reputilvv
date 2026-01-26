@@ -405,7 +405,7 @@ export default function ReporteRetailPage() {
                       <strong>Transacción `SE16`</strong>:
                       <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
                         <li>Ingresa a la transacción `SE16`, escribe la tabla <strong>`EKBE`</strong> y presiona Enter.</li>
-                        <li>Carga la variante: Menú <strong>Pasar a > Variantes > Traer...</strong> y selecciona <strong>`REVOC`</strong>.</li>
+                        <li>Carga la variante: Menú <strong>Pasar a &gt; Variantes &gt; Traer...</strong> y selecciona <strong>`REVOC`</strong>.</li>
                       </ul>
                     </li>
                     <li>
@@ -419,7 +419,7 @@ export default function ReporteRetailPage() {
                       <strong>Exportar a Excel</strong>:
                       <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
                         <li>Asegúrate de que las columnas `BELNR` y `EBELN` estén visibles.</li>
-                        <li>Ve a <strong>Sistema > Lista > Grabar > Fichero local</strong>.</li>
+                        <li>Ve a <strong>Sistema &gt; Lista &gt; Grabar &gt; Fichero local</strong>.</li>
                         <li>Elige la opción <strong>"Hoja de cálculo"</strong>.</li>
                         <li>Guarda el archivo. Este será el archivo Excel que subirás a la herramienta. <strong>No necesitas crear una tabla dinámica.</strong></li>
                       </ul>
