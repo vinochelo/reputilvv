@@ -102,8 +102,10 @@ export default function Home() {
                 RM
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold tracking-tight text-foreground">
-              Portal de Herramientas
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-primary via-destructive to-accent bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient">
+                Portal de Herramientas
+              </span>
             </h1>
           </div>
         </div>
