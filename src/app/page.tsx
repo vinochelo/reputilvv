@@ -2,10 +2,19 @@
 
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { FileText, Building, Mail, ShieldCheck, ArrowRight } from 'lucide-react';
+import { FileText, Building, Mail, ShieldCheck, ArrowRight, Wrench, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-const tools = [
+type Tool = {
+    title: string;
+    description: string;
+    href: string;
+    icon: LucideIcon;
+    status?: 'beta';
+};
+
+const mainTools: Tool[] = [
   {
     title: 'Reportes de venta en verde',
     description: 'Genera PDFs de reportes de utilidad Venta en Verde a partir del resumen en Excel.',
@@ -30,6 +39,9 @@ const tools = [
     href: 'https://extractor-kohl.vercel.app/',
     icon: ShieldCheck,
   },
+];
+
+const secondaryTools: Tool[] = [
   {
     title: 'Control de retenciones (Beta)',
     description: 'Nueva versión en desarrollo para gestionar retenciones con IA.',
@@ -44,6 +56,35 @@ const tools = [
     icon: Building,
   },
 ];
+
+const ToolCard = ({ tool }: { tool: Tool }) => (
+    <Link 
+        href={tool.href} 
+        key={tool.title} 
+        className="block group h-full"
+        target={tool.href.startsWith('http') ? '_blank' : undefined}
+        rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+    >
+        <Card className="h-full flex flex-col p-8 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl rounded-2xl border hover:border-primary/50">
+            <div className="flex-grow">
+            <div className={cn("bg-primary/10 p-4 rounded-xl self-start inline-block mb-6", {
+                "bg-destructive/10": tool.status === 'beta',
+            })}>
+                <tool.icon className={cn("w-8 h-8 text-primary", {
+                "text-destructive": tool.status === 'beta',
+                })} />
+            </div>
+            <h2 className="font-headline text-2xl font-semibold">{tool.title}</h2>
+            <p className="mt-2 text-base text-foreground/80">{tool.description}</p>
+            </div>
+            <div className="flex items-center text-sm font-bold text-primary mt-8">
+            Ir a la herramienta
+            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
+            </div>
+        </Card>
+    </Link>
+);
+
 
 export default function Home() {
   return (
@@ -66,33 +107,29 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        {tools.map((tool) => (
-          <Link 
-            href={tool.href} 
-            key={tool.title} 
-            className="block group"
-            target={tool.href.startsWith('http') ? '_blank' : undefined}
-            rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-          >
-            <Card className="h-full flex flex-col p-8 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl rounded-2xl border hover:border-primary/50">
-              <div className="flex-grow">
-                <div className={cn("bg-primary/10 p-4 rounded-xl self-start inline-block mb-6", {
-                  "bg-destructive/10": tool.status === 'beta',
-                })}>
-                  <tool.icon className={cn("w-8 h-8 text-primary", {
-                    "text-destructive": tool.status === 'beta',
-                  })} />
-                </div>
-                <h2 className="font-headline text-2xl font-semibold">{tool.title}</h2>
-                <p className="mt-2 text-base text-foreground/80">{tool.description}</p>
-              </div>
-              <div className="flex items-center text-sm font-bold text-primary mt-8">
-                Ir a la herramienta
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-2" />
-              </div>
-            </Card>
-          </Link>
+        {mainTools.map((tool) => (
+          <ToolCard tool={tool} key={tool.title} />
         ))}
+      </div>
+      
+      <div className="max-w-4xl mx-auto mt-8">
+        <Accordion type="single" collapsible className="w-full bg-card rounded-2xl border px-6">
+          <AccordionItem value="secondary-tools" className="border-b-0">
+            <AccordionTrigger className="text-lg font-semibold hover:no-underline py-6">
+                <div className="flex items-center gap-3">
+                    <Wrench className="w-6 h-6 text-primary/80" />
+                    <span>Herramientas Beta y de Respaldo</span>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2 pb-6">
+                {secondaryTools.map((tool) => (
+                    <ToolCard tool={tool} key={tool.title} />
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </main>
   );
