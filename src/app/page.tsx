@@ -73,7 +73,7 @@ const ToolCard = ({ tool }: { tool: Tool }) => (
                     { "bg-destructive/10": tool.status === 'beta' }
                 )}>
                     <tool.icon className={cn(
-                        "w-6 h-6 text-primary", 
+                        "w-6 h-6 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-12deg]", 
                         { "text-destructive": tool.status === 'beta' }
                     )} />
                 </div>
