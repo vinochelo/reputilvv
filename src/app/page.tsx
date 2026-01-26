@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -106,9 +105,6 @@ export default function Home() {
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold tracking-tight text-foreground">
               Portal de Herramientas
             </h1>
-            <p className="mt-4 max-w-3xl mx-auto text-lg text-foreground/80">
-              Un espacio centralizado para acceder a todas tus aplicaciones de trabajo y mejorar tu productividad.
-            </p>
           </div>
         </div>
       </section>
