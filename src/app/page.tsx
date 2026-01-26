@@ -73,7 +73,7 @@ const ToolCard = ({ tool }: { tool: Tool }) => (
                     { "bg-destructive/10": tool.status === 'beta' }
                 )}>
                     <tool.icon className={cn(
-                        "w-6 h-6 text-primary transition-transform duration-300 group-hover:-translate-y-2", 
+                        "w-6 h-6 text-primary transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110", 
                         { "text-destructive": tool.status === 'beta' }
                     )} />
                 </div>
@@ -99,7 +99,7 @@ export default function Home() {
               <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-6xl">
+              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-7xl">
                 RM
               </span>
             </div>
