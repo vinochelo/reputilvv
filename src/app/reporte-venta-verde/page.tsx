@@ -494,5 +494,4 @@ export default function ReporteVentaVerdePage() {
       </section>
     </main>
   );
-
-    
+}
