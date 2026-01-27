@@ -24,7 +24,7 @@ const mainTools: Tool[] = [
   {
     title: 'Reportes de Retail',
     description: 'Genera PDFs de reportes de utilidad Retail con datos de SAP.',
-    href: '/reporte-retail',
+    href: 'https://reportesrespaldo.vercel.app/',
     icon: Building,
   },
   {
@@ -50,10 +50,11 @@ const secondaryTools: Tool[] = [
     status: 'beta',
   },
   {
-    title: 'Reportes de Retail (Respaldo)',
-    description: 'Método alternativo para procesar reportes en caso de errores.',
-    href: 'https://reportesrespaldo.vercel.app/',
+    title: 'Reportes de Retail (En desarrollo)',
+    description: 'Versión anterior para procesar reportes. Se moverá a producción pronto.',
+    href: '/reporte-retail',
     icon: Building,
+    status: 'beta',
   },
 ];
 
