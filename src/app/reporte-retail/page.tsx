@@ -91,9 +91,6 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    // The purchase order number is the key for sorting, present in both files.
-    // The final PDF is grouped by document number.
-
     const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ebeln', 'ord.decompra', 'orden de compra']);
     
     // 1. Get the ordered list of purchase orders from the 'order' file.
@@ -105,18 +102,19 @@ export default function ReporteRetailPage() {
     }
 
     // 2. Create a map from Purchase Order -> Document Number from the main data.
-    const poToDocNumMap = new Map<any, any>();
+    // We convert the PO to a string and trim it to avoid type mismatches (e.g., number vs string) and whitespace issues.
+    const poToDocNumMap = new Map<string, any>();
     mainData.forEach(item => {
         const po = getOrder(item);
         const docId = getDocId(item);
         if (po !== undefined && docId !== undefined) {
-            poToDocNumMap.set(po, docId);
+            poToDocNumMap.set(String(po).trim(), docId);
         }
     });
 
     // 3. Create an ordered list of document numbers based on the purchase order sequence.
     const orderedDocIdsWithDuplicates = orderedPurchaseOrders
-      .map(po => poToDocNumMap.get(po))
+      .map(po => poToDocNumMap.get(String(po).trim())) // Also convert to string for lookup
       .filter(docId => docId !== undefined);
 
     const orderedDocIds = [...new Set(orderedDocIdsWithDuplicates)];
@@ -481,5 +479,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
