@@ -48,13 +48,15 @@ const getPostingDate = (item: RetailData) => getValue(item, ['fechacontab.', 'bl
 
 
 export default function ReporteRetailPage() {
+  const [dataFile, setDataFile] = useState<File | null>(null);
+  const [orderFile, setOrderFile] = useState<File | null>(null);
   const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [fileName, setFileName] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dataFileInputRef = useRef<HTMLInputElement>(null);
+  const orderFileInputRef = useRef<HTMLInputElement>(null);
   const cancelPdfGeneration = useRef(false);
 
   useEffect(() => {
@@ -66,57 +68,38 @@ export default function ReporteRetailPage() {
     generate();
   }, [processedData, status]);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleDataFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
-        toast({
-          title: "Error de archivo",
-          description: "Por favor, sube un archivo de Excel (.xlsx o .xls).",
-          variant: "destructive",
-        });
+        toast({ title: "Error de archivo", description: "Sube un archivo Excel.", variant: "destructive" });
         return;
       }
-      resetState();
-      setFileName(file.name);
-      setStatus('parsing');
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json<RetailData>(worksheet);
-          
-          const groupedData = processData(jsonData);
-          if (groupedData && groupedData.length > 0) {
-            setProcessedData(groupedData);
-          } else {
-            setStatus('error');
-          }
-        } catch (error) {
-          console.error("Error parsing Excel file:", error);
-          toast({
-            title: "Error al procesar el archivo",
-            description: "No se pudo leer el archivo de Excel. Asegúrate de que el formato sea correcto.",
-            variant: "destructive",
-          });
-          setStatus('error');
-        }
-      };
-      reader.onerror = () => {
-        console.error("Error reading file");
-        toast({ title: "Error al leer el archivo", variant: "destructive" });
-        setStatus('error');
-      }
-      reader.readAsArrayBuffer(file);
+      setDataFile(file);
     }
   };
 
-  const processData = (data: RetailData[]): GroupedData[] | null => {
-    const grouped = data.reduce<{[key: string]: GroupedData}>((acc, item) => {
+  const handleOrderFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
+            toast({ title: "Error de archivo", description: "Sube un archivo Excel.", variant: "destructive" });
+            return;
+        }
+        setOrderFile(file);
+    }
+  };
+
+  const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
+    const getOrderDocId = (item: any) => getValue(item, ['belnr', 'nºdocumento', 'nro.documento']);
+    const orderedDocIds = orderData.map(getOrderDocId).filter(id => id !== undefined);
+
+    if (orderedDocIds.length === 0) {
+        toast({ title: "Error en archivo de orden", description: "No se encontraron números de documento en el archivo de orden para establecer la secuencia.", variant: "destructive" });
+        return null;
+    }
+
+    const grouped = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
       const docId = getDocId(item);
       if (docId === undefined || docId === null) return acc;
 
@@ -138,25 +121,87 @@ export default function ReporteRetailPage() {
 
       return acc;
     }, {});
+    
+    const finalGroupedData: GroupedData[] = [];
+    const docIdSet = new Set();
 
-    const groupedArray = Object.values(grouped);
+    for (const docId of orderedDocIds) {
+        if (grouped[docId] && !docIdSet.has(docId)) {
+            finalGroupedData.push(grouped[docId]);
+            docIdSet.add(docId);
+        }
+    }
 
-    if (groupedArray.length === 0 && data.length > 0) {
-      const firstRowKeys = Object.keys(data[0]).join(', ');
+    if (finalGroupedData.length === 0) {
       toast({
-        title: "No se pudo agrupar",
-        description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº documento' o 'BELNR' exista. Columnas encontradas: ${firstRowKeys}`,
+        title: "No hay coincidencias",
+        description: "Ningún documento del archivo de datos coincide con los del archivo de orden.",
         variant: "destructive",
-        duration: 9000,
       });
       return null;
     }
 
-    // Sort by document number
-    groupedArray.sort((a, b) => String(a.n_doc).localeCompare(String(b.n_doc), undefined, { numeric: true }));
-    return groupedArray;
+    return finalGroupedData;
   };
 
+  const handleGenerateReport = async () => {
+    if (!dataFile || !orderFile) {
+        toast({ title: "Faltan archivos", description: "Por favor, selecciona ambos archivos de Excel.", variant: "destructive" });
+        return;
+    }
+
+    setStatus('parsing');
+    
+    try {
+        const readDataFile = new Promise<RetailData[]>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                resolve(XLSX.utils.sheet_to_json<RetailData>(worksheet));
+            };
+            reader.onerror = (e) => reject(new Error("Error al leer el archivo de datos."));
+            reader.readAsArrayBuffer(dataFile);
+        });
+
+        const readOrderFile = new Promise<any[]>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                resolve(XLSX.utils.sheet_to_json(worksheet));
+            };
+            reader.onerror = (e) => reject(new Error("Error al leer el archivo de orden."));
+            reader.readAsArrayBuffer(orderFile);
+        });
+
+        const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
+
+        const groupedAndSortedData = processData(mainData, orderData);
+
+        if (groupedAndSortedData && groupedAndSortedData.length > 0) {
+            setProcessedData(groupedAndSortedData);
+            // The useEffect will trigger PDF generation
+        } else {
+            // processData function shows specific toast on error
+            setStatus('error');
+        }
+
+    } catch (error: any) {
+        console.error("Error procesando archivos:", error);
+        toast({
+            title: "Error al procesar archivos",
+            description: error.message || "Asegúrate de que los formatos sean correctos.",
+            variant: "destructive",
+        });
+        setStatus('error');
+    }
+  };
+  
   const handleDownloadPdf = async () => {
     if (!pdfContentRef.current) {
         setStatus('error');
@@ -209,7 +254,7 @@ export default function ReporteRetailPage() {
   
     if (successfulPages > 0) {
       try {
-        pdf.save('reporte_retail.pdf');
+        pdf.save('reporte_retail_ordenado.pdf');
         setStatus('success');
         toast({ title: "¡Éxito! PDF generado.", description: "La descarga de tu archivo ha comenzado." });
       } catch (e) {
@@ -228,14 +273,14 @@ export default function ReporteRetailPage() {
   };
   
   const resetState = () => {
+    setDataFile(null);
+    setOrderFile(null);
     setProcessedData(null);
-    setFileName(null);
     setStatus('idle');
     setProgress(0);
     cancelPdfGeneration.current = false;
-    if(fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if(dataFileInputRef.current) dataFileInputRef.current.value = "";
+    if(orderFileInputRef.current) orderFileInputRef.current.value = "";
   };
 
   const renderStatus = () => {
@@ -244,8 +289,8 @@ export default function ReporteRetailPage() {
             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Procesando tu archivo Excel...</p>
-                    <p className="text-sm text-muted-foreground">{fileName}</p>
+                    <p className="text-lg font-semibold text-foreground">Procesando tus archivos Excel...</p>
+                    <p className="text-sm text-muted-foreground">{dataFile?.name} & {orderFile?.name}</p>
                 </div>
             );
         case 'generating':
@@ -270,7 +315,7 @@ export default function ReporteRetailPage() {
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <CheckCircle className="w-12 h-12 text-green-600" />
                     <p className="text-lg font-semibold text-foreground">¡PDF Generado con Éxito!</p>
-                    <p className="text-sm text-muted-foreground">Tu descarga ha comenzado para: {fileName}</p>
+                    <p className="text-sm text-muted-foreground">Tu descarga ha comenzado.</p>
                     <Button onClick={resetState}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Generar Otro Reporte
@@ -282,7 +327,7 @@ export default function ReporteRetailPage() {
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <XCircle className="w-12 h-12 text-destructive" />
                     <p className="text-lg font-semibold text-foreground">Ocurrió un Error</p>
-                    <p className="text-sm text-muted-foreground">No se pudo generar el reporte. Por favor, revisa el archivo e inténtalo de nuevo.</p>
+                    <p className="text-sm text-muted-foreground">No se pudo generar el reporte. Por favor, revisa los archivos e inténtalo de nuevo.</p>
                     <Button variant="outline" onClick={resetState}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Intentar de Nuevo
@@ -292,22 +337,36 @@ export default function ReporteRetailPage() {
         case 'idle':
         default:
             return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <UploadCloud className="w-16 h-16 text-primary" />
-                    <p className="text-lg font-semibold text-foreground">Haz clic para subir tu archivo de Excel</p>
-                    <p className="text-muted-foreground">El PDF se generará y descargará al instante</p>
-                    <Button onClick={() => fileInputRef.current?.click()}>
-                        <Shuffle className="mr-2 h-4 w-4" />
-                        Seleccionar Archivo
-                    </Button>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept=".xlsx, .xls"
-                    />
-                </div>
+              <div className="flex flex-col items-center justify-center space-y-6 text-center w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                      <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
+                          <UploadCloud className="w-12 h-12 text-primary/70" />
+                          <p className="font-semibold mt-2">1. Archivo de Datos</p>
+                          <p className="text-xs text-muted-foreground">El reporte principal de SAP.</p>
+                          <Button onClick={() => dataFileInputRef.current?.click()} className="mt-4" variant="outline">
+                              Seleccionar Archivo
+                          </Button>
+                          {dataFile && <p className="text-sm mt-2 text-green-600 font-medium">{dataFile.name}</p>}
+                      </div>
+                      <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
+                          <UploadCloud className="w-12 h-12 text-primary/70" />
+                          <p className="font-semibold mt-2">2. Archivo de Orden</p>
+                          <p className="text-xs text-muted-foreground">Excel que define el orden de documentos.</p>
+                          <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
+                              Seleccionar Archivo
+                          </Button>
+                          {orderFile && <p className="text-sm mt-2 text-green-600 font-medium">{orderFile.name}</p>}
+                      </div>
+                  </div>
+
+                  <Button onClick={handleGenerateReport} disabled={!dataFile || !orderFile} size="lg" className="w-full md:w-auto">
+                      <Shuffle className="mr-2 h-4 w-4" />
+                      Generar Reporte PDF
+                  </Button>
+
+                  <input ref={dataFileInputRef} type="file" className="hidden" onChange={handleDataFileChange} accept=".xlsx, .xls" />
+                  <input ref={orderFileInputRef} type="file" className="hidden" onChange={handleOrderFileChange} accept=".xlsx, .xls" />
+              </div>
             );
     }
   }
@@ -323,15 +382,15 @@ export default function ReporteRetailPage() {
 
       <div className="text-center mb-12">
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Reportes de Retail
+          Reportes de Retail (con Ordenamiento)
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Sube tu reporte de SAP en Excel para generar un PDF para imprimir, ordenado y agrupado por número de documento.
+          Sube tu reporte de SAP y un archivo de orden para generar un PDF listo para imprimir, agrupado y ordenado por número de documento.
         </p>
       </div>
 
-      <Card className="max-w-2xl mx-auto shadow-lg">
-          <CardContent className="p-8 min-h-[250px] flex items-center justify-center">
+      <Card className="max-w-4xl mx-auto shadow-lg">
+          <CardContent className="p-8 min-h-[350px] flex items-center justify-center">
             {renderStatus()}
           </CardContent>
       </Card>
@@ -363,7 +422,6 @@ export default function ReporteRetailPage() {
                         try {
                            const date = new Date(dateValue);
                            if (!Number.isNaN(date.getTime())) {
-                             // Adjust for timezone offset
                              const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
                              formattedDate = `${String(adjustedDate.getDate()).padStart(2, '0')}.${String(adjustedDate.getMonth() + 1).padStart(2, '0')}.${adjustedDate.getFullYear()}`;
                            }
@@ -402,3 +460,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
