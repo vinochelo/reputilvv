@@ -37,7 +37,7 @@ const getValue = (item: any, keys: string[]): any => {
 
 // Accessor functions for specific fields
 const getDocId = (item: RetailData) => getValue(item, ['nºdocumento', 'belnr', 'nro.documento']);
-const getOrder = (item: RetailData) => getValue(item, ['ord.decompra', 'ebeln']);
+const getOrder = (item: RetailData) => getValue(item, ['ord.decompra', 'ebeln', 'orden de compra']);
 const getProvider = (item: RetailData) => getValue(item, ['proveedor', 'lifnr']);
 const getProviderName = (item: RetailData) => getValue(item, ['nombredelproveedor']);
 const getMaterial = (item: RetailData) => getValue(item, ['material']);
@@ -91,14 +91,37 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    const getOrderDocId = (item: any) => getValue(item, ['belnr', 'nºdocumento', 'nro.documento']);
-    const orderedDocIds = orderData.map(getOrderDocId).filter(id => id !== undefined);
+    // The purchase order number is the key for sorting, present in both files.
+    // The final PDF is grouped by document number.
 
-    if (orderedDocIds.length === 0) {
-        toast({ title: "Error en archivo de orden", description: "No se encontraron números de documento en el archivo de orden para establecer la secuencia.", variant: "destructive" });
+    const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ebeln', 'ord.decompra', 'orden de compra']);
+    
+    // 1. Get the ordered list of purchase orders from the 'order' file.
+    const orderedPurchaseOrders = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined);
+
+    if (orderedPurchaseOrders.length === 0) {
+        toast({ title: "Error en archivo de orden", description: "No se encontraron 'ordenes de compra' (ej: columna EBELN) en el archivo de orden para establecer la secuencia.", variant: "destructive" });
         return null;
     }
 
+    // 2. Create a map from Purchase Order -> Document Number from the main data.
+    const poToDocNumMap = new Map<any, any>();
+    mainData.forEach(item => {
+        const po = getOrder(item);
+        const docId = getDocId(item);
+        if (po !== undefined && docId !== undefined) {
+            poToDocNumMap.set(po, docId);
+        }
+    });
+
+    // 3. Create an ordered list of document numbers based on the purchase order sequence.
+    const orderedDocIdsWithDuplicates = orderedPurchaseOrders
+      .map(po => poToDocNumMap.get(po))
+      .filter(docId => docId !== undefined);
+
+    const orderedDocIds = [...new Set(orderedDocIdsWithDuplicates)];
+    
+    // 4. Group mainData by document number.
     const grouped = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
       const docId = getDocId(item);
       if (docId === undefined || docId === null) return acc;
@@ -122,20 +145,18 @@ export default function ReporteRetailPage() {
       return acc;
     }, {});
     
+    // 5. Build the final sorted list for the PDF.
     const finalGroupedData: GroupedData[] = [];
-    const docIdSet = new Set();
-
     for (const docId of orderedDocIds) {
-        if (grouped[docId] && !docIdSet.has(docId)) {
+        if (grouped[docId]) {
             finalGroupedData.push(grouped[docId]);
-            docIdSet.add(docId);
         }
     }
 
     if (finalGroupedData.length === 0) {
       toast({
         title: "No hay coincidencias",
-        description: "Ningún documento del archivo de datos coincide con los del archivo de orden.",
+        description: "Ninguna orden de compra en el archivo de datos coincide con las del archivo de orden. Revisa que los números de 'orden de compra' sean los mismos en ambos archivos.",
         variant: "destructive",
       });
       return null;
