@@ -92,8 +92,7 @@ export default function ReporteRetailPage() {
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
     const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
     
-    // 1. Get the unique, ordered list of purchase orders from the 'order' file.
-    const orderedPurchaseOrdersWithDuplicates = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined);
+    const orderedPurchaseOrdersWithDuplicates = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined && po !== null);
     const orderedPurchaseOrders = [...new Set(orderedPurchaseOrdersWithDuplicates)];
 
     if (orderedPurchaseOrders.length === 0) {
@@ -101,7 +100,6 @@ export default function ReporteRetailPage() {
         return null;
     }
 
-    // 2. Group mainData by purchase order.
     const groupedByPo = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
       const po = getOrder(item);
       if (po === undefined || po === null) return acc;
@@ -110,7 +108,7 @@ export default function ReporteRetailPage() {
 
       if (!acc[poKey]) {
         acc[poKey] = {
-          n_doc: po, // The group key is now the Purchase Order number
+          n_doc: po,
           items: [],
           totalCantidad: 0,
           totalImporte: 0,
@@ -127,7 +125,6 @@ export default function ReporteRetailPage() {
       return acc;
     }, {});
     
-    // 3. Build the final sorted list for the PDF based on the order file.
     const finalGroupedData: GroupedData[] = [];
     for (const po of orderedPurchaseOrders) {
         const poKey = String(po).trim();
@@ -160,26 +157,50 @@ export default function ReporteRetailPage() {
         const readDataFile = new Promise<RetailData[]>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                resolve(XLSX.utils.sheet_to_json<RetailData>(worksheet));
+                try {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    resolve(XLSX.utils.sheet_to_json<RetailData>(worksheet));
+                } catch (err) {
+                    reject(new Error("Error al leer el archivo de datos."));
+                }
             };
-            reader.onerror = (e) => reject(new Error("Error al leer el archivo de datos."));
+            reader.onerror = () => reject(new Error("Error al leer el archivo de datos."));
             reader.readAsArrayBuffer(dataFile);
         });
 
         const readOrderFile = new Promise<any[]>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const data = e.target?.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                resolve(XLSX.utils.sheet_to_json(worksheet));
+                try {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    
+                    const aoa: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+                    
+                    let headerRowIndex = -1;
+                    for (let i = 0; i < Math.min(aoa.length, 10); i++) {
+                        const row = aoa[i] || [];
+                        if (row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN')) {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
+
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                        range: headerRowIndex !== -1 ? headerRowIndex : 0,
+                    });
+                    
+                    resolve(jsonData);
+                } catch (err) {
+                    reject(new Error("Error al leer el archivo de orden."));
+                }
             };
-            reader.onerror = (e) => reject(new Error("Error al leer el archivo de orden."));
+            reader.onerror = () => reject(new Error("Error al leer el archivo de orden."));
             reader.readAsArrayBuffer(orderFile);
         });
 
@@ -189,9 +210,7 @@ export default function ReporteRetailPage() {
 
         if (groupedAndSortedData && groupedAndSortedData.length > 0) {
             setProcessedData(groupedAndSortedData);
-            // The useEffect will trigger PDF generation
         } else {
-            // processData function shows specific toast on error
             setStatus('error');
         }
 
