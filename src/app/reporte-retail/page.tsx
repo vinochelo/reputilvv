@@ -90,6 +90,14 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
+    // This new helper normalizes keys by trimming and removing leading zeros.
+    const normalizePO = (value: any): string => {
+        if (value === undefined || value === null) return "";
+        // Remove leading zeros only if the value is purely numeric
+        const stringValue = String(value).trim();
+        return stringValue.match(/^[0-9]+$/) ? stringValue.replace(/^0+/, '') : stringValue;
+    }
+
     // Accessors for Order File
     const getDocNoFromOrderFile = (item: any) => getValue(item, ['documento no.', 'belnr']);
     const getPoFromOrderFile = (item: any) => getValue(item, ['orden de compra', 'ebeln']);
@@ -108,7 +116,9 @@ export default function ReporteRetailPage() {
         if (docNo === undefined || poNo === undefined) return;
 
         const docKey = String(docNo).trim();
-        const poKey = String(poNo).trim();
+        const poKey = normalizePO(poNo);
+        
+        if (!poKey) return;
 
         if (!docToPoMap.has(docKey)) {
             docToPoMap.set(docKey, []);
@@ -116,7 +126,11 @@ export default function ReporteRetailPage() {
                 orderedDocs.push(docKey);
             }
         }
-        docToPoMap.get(docKey)!.push(poKey);
+        
+        const poList = docToPoMap.get(docKey)!;
+        if (!poList.includes(poKey)) {
+          poList.push(poKey);
+        }
     });
     
     if (orderedDocs.length === 0) {
@@ -129,7 +143,9 @@ export default function ReporteRetailPage() {
         const po = getPoFromDataFile(item);
         if (po === undefined || po === null) return acc;
 
-        const poKey = String(po).trim();
+        const poKey = normalizePO(po);
+        if (!poKey) return acc;
+        
         if (!acc[poKey]) {
             acc[poKey] = [];
         }
@@ -145,6 +161,7 @@ export default function ReporteRetailPage() {
         
         let allItemsForDoc: RetailData[] = [];
         poNumbers.forEach(poKey => {
+            // poKey is already normalized here
             const items = poToItemsMap[poKey] || [];
             allItemsForDoc = allItemsForDoc.concat(items);
         });
@@ -240,8 +257,7 @@ export default function ReporteRetailPage() {
         if (groupedAndSortedData && groupedAndSortedData.length > 0) {
             setProcessedData(groupedAndSortedData);
         } else {
-            // processData will have already shown a toast with the specific error
-            if (status !== 'error') { // Avoid showing double errors
+            if (status !== 'error') {
                 setStatus('error');
             }
         }
@@ -515,7 +531,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
-
-    
