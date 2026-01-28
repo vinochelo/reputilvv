@@ -16,7 +16,7 @@ import Link from 'next/link';
 type Status = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
 type RetailData = { [key: string]: any };
 type GroupedData = {
-  n_doc: number | string; // This will hold the Purchase Order number
+  n_doc: number | string; // This will hold the Document Number (BELNR)
   items: RetailData[];
   totalCantidad: number;
   totalImporte: number;
@@ -90,46 +90,75 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
-    
-    const orderedPurchaseOrdersWithDuplicates = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined && po !== null);
-    const orderedPurchaseOrders = [...new Set(orderedPurchaseOrdersWithDuplicates)];
+    // Accessors for Order File
+    const getDocNoFromOrderFile = (item: any) => getValue(item, ['documento no.', 'belnr']);
+    const getPoFromOrderFile = (item: any) => getValue(item, ['orden de compra', 'ebeln']);
 
-    if (orderedPurchaseOrders.length === 0) {
-        toast({ title: "Error en archivo de orden", description: "No se encontraron 'ordenes de compra' (ej: columna EBELN) en el archivo de orden para establecer la secuencia.", variant: "destructive" });
+    // Accessor for Data File
+    const getPoFromDataFile = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
+
+    // 1. Process Order File to get an ordered list of documents and a map from DocNo to POs
+    const docToPoMap = new Map<string, string[]>();
+    const orderedDocs: string[] = [];
+
+    orderData.forEach(item => {
+        const docNo = getDocNoFromOrderFile(item);
+        const poNo = getPoFromOrderFile(item);
+
+        if (docNo === undefined || poNo === undefined) return;
+
+        const docKey = String(docNo).trim();
+        const poKey = String(poNo).trim();
+
+        if (!docToPoMap.has(docKey)) {
+            docToPoMap.set(docKey, []);
+            if (!orderedDocs.includes(docKey)) {
+                orderedDocs.push(docKey);
+            }
+        }
+        docToPoMap.get(docKey)!.push(poKey);
+    });
+    
+    if (orderedDocs.length === 0) {
+        toast({ title: "Error en archivo de orden", description: "No se encontraron 'Documento no.' o 'Orden de compra' en el archivo de orden.", variant: "destructive" });
         return null;
     }
 
-    const groupedByPo = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
-      const po = getOrder(item);
-      if (po === undefined || po === null) return acc;
+    // 2. Process Data File to group all items by Purchase Order
+    const poToItemsMap = mainData.reduce<{[key: string]: RetailData[]}>((acc, item) => {
+        const po = getPoFromDataFile(item);
+        if (po === undefined || po === null) return acc;
 
-      const poKey = String(po).trim();
-
-      if (!acc[poKey]) {
-        acc[poKey] = {
-          n_doc: po,
-          items: [],
-          totalCantidad: 0,
-          totalImporte: 0,
-        };
-      }
-      
-      const cantidad = getQuantity(item);
-      const importe = getAmount(item);
-      
-      acc[poKey].items.push(item);
-      acc[poKey].totalCantidad += cantidad;
-      acc[poKey].totalImporte += importe;
-
-      return acc;
-    }, {});
-    
-    const finalGroupedData: GroupedData[] = [];
-    for (const po of orderedPurchaseOrders) {
         const poKey = String(po).trim();
-        if (groupedByPo[poKey]) {
-            finalGroupedData.push(groupedByPo[poKey]);
+        if (!acc[poKey]) {
+            acc[poKey] = [];
+        }
+        acc[poKey].push(item);
+        return acc;
+    }, {});
+
+    // 3. Combine data based on the order and grouping defined by the order file
+    const finalGroupedData: GroupedData[] = [];
+
+    for (const docKey of orderedDocs) {
+        const poNumbers = docToPoMap.get(docKey) || [];
+        
+        let allItemsForDoc: RetailData[] = [];
+        poNumbers.forEach(poKey => {
+            const items = poToItemsMap[poKey] || [];
+            allItemsForDoc = allItemsForDoc.concat(items);
+        });
+
+        if (allItemsForDoc.length > 0) {
+            const totalCantidad = allItemsForDoc.reduce((sum, item) => sum + getQuantity(item), 0);
+            const totalImporte = allItemsForDoc.reduce((sum, item) => sum + getAmount(item), 0);
+
+            finalGroupedData.push({
+                n_doc: docKey, // This is now the Document Number (BELNR)
+                items: allItemsForDoc,
+                totalCantidad: totalCantidad,
+                totalImporte: totalImporte,
+            });
         }
     }
 
@@ -185,7 +214,7 @@ export default function ReporteRetailPage() {
                     let headerRowIndex = -1;
                     for (let i = 0; i < Math.min(aoa.length, 10); i++) {
                         const row = aoa[i] || [];
-                        if (row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN')) {
+                        if (row.some(cell => typeof cell === 'string' && (cell.trim().toUpperCase() === 'EBELN' || cell.trim().toUpperCase() === 'ORDEN DE COMPRA' || cell.trim().toUpperCase() === 'DOCUMENTO NO.'))) {
                             headerRowIndex = i;
                             break;
                         }
@@ -211,7 +240,10 @@ export default function ReporteRetailPage() {
         if (groupedAndSortedData && groupedAndSortedData.length > 0) {
             setProcessedData(groupedAndSortedData);
         } else {
-            setStatus('error');
+            // processData will have already shown a toast with the specific error
+            if (status !== 'error') { // Avoid showing double errors
+                setStatus('error');
+            }
         }
 
     } catch (error: any) {
@@ -422,7 +454,7 @@ export default function ReporteRetailPage() {
         {processedData?.map((group) => (
             <div key={group.n_doc} className="p-4 bg-white text-black w-[1123px]">
               <header className="mb-2">
-                  <h2 className="text-primary text-base font-normal">Reporte Retail - Orden de Compra: {group.n_doc}</h2>
+                  <h2 className="text-primary text-base font-normal">Reporte Retail - Documento: {group.n_doc}</h2>
               </header>
               <Table className="border-collapse text-[8px]">
                   <TableHeader>
@@ -483,5 +515,7 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
 
     
