@@ -1,230 +1,319 @@
+
 "use client";
 
-import { useState, useRef, ChangeEvent } from 'react';
-import { ArrowLeft, Shuffle, FileSpreadsheet, Loader2, FileCheck2 } from 'lucide-react';
-import Link from 'next/link';
+import { useState, useRef, ChangeEvent, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-
+import { UploadCloud, FileDown, Loader2, ArrowLeft, CheckCircle, XCircle, RefreshCw, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
+type Status = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
+type RetailData = { [key: string]: any };
+type GroupedData = {
+  n_doc: number | string;
+  items: RetailData[];
+  totalCantidad: number;
+  totalImporte: number;
+};
+
+// Helper to get a value from an object with multiple possible keys, ignoring case, spaces, and dots.
+const getValue = (item: any, keys: string[]): any => {
+    const itemKeys = Object.keys(item);
+    for (const key of keys) {
+        const normalizedKey = key.toLowerCase().replace(/[\.\s]/g, '');
+        const foundKey = itemKeys.find(ik => ik.trim().toLowerCase().replace(/[\.\s]/g, '') === normalizedKey);
+        if (foundKey && item[foundKey] !== null && item[foundKey] !== undefined) {
+            return item[foundKey];
+        }
+    }
+    return undefined;
+};
+
+// Accessor functions for specific fields
+const getDocId = (item: RetailData) => getValue(item, ['nºdocumento', 'belnr', 'nro.documento']);
+const getOrder = (item: RetailData) => getValue(item, ['ord.decompra', 'ebeln']);
+const getProvider = (item: RetailData) => getValue(item, ['proveedor', 'lifnr']);
+const getProviderName = (item: RetailData) => getValue(item, ['nombredelproveedor']);
+const getMaterial = (item: RetailData) => getValue(item, ['material']);
+const getMaterialText = (item: RetailData) => getValue(item, ['textobrevedematerial']);
+const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cantidad', 'menge'])) || 0;
+const getAmount = (item: RetailData) => parseFloat(getValue(item, ['importeenmon.local', 'wrbtr'])) || 0;
+const getPostingDate = (item: RetailData) => getValue(item, ['fechacontab.', 'bldat']);
+
 
 export default function ReporteRetailPage() {
-  const [dataFile, setDataFile] = useState<File | null>(null);
-  const [excelFile, setExcelFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [processCompleted, setProcessCompleted] = useState(false);
-  const [fileName, setFileName] = useState<{data: string | null, excel: string | null}>({ data: null, excel: null });
-  const [debugData, setDebugData] = useState<{rawText: string, orders: string[]} | null>(null);
-  const dataInputRef = useRef<HTMLInputElement>(null);
-  const excelInputRef = useRef<HTMLInputElement>(null);
+  const [processedData, setProcessedData] = useState<GroupedData[] | null>(null);
+  const [status, setStatus] = useState<Status>('idle');
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cancelPdfGeneration = useRef(false);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'data' | 'excel') => {
+  useEffect(() => {
+    const generate = async () => {
+      if (processedData && processedData.length > 0 && status === 'parsing') {
+        await handleDownloadPdf();
+      }
+    };
+    generate();
+  }, [processedData, status]);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
-      toast({ title: "Error de archivo", description: "Por favor, sube un archivo de Excel (.xlsx o .xls).", variant: "destructive" });
-      return;
-    }
-    
-    if (type === 'data') setDataFile(file);
-    if (type === 'excel') setExcelFile(file);
-    setFileName(prev => ({ ...prev, [type]: file.name }));
-    setDebugData(null);
-    setProcessCompleted(false);
-  };
-
-  const handleProcess = async () => {
-    if (!dataFile || !excelFile) {
-      toast({ title: "Faltan archivos", description: "Por favor, sube ambos archivos de Excel.", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-    setDebugData(null);
-    setProcessCompleted(false);
-    
-    try {
-        // 1. Read and parse ordering Excel (EKBE)
-        const orderExcelBuffer = await excelFile.arrayBuffer();
-        const orderWorkbook = XLSX.read(orderExcelBuffer, { type: 'buffer' });
-        const orderSheetName = orderWorkbook.SheetNames[0];
-        const orderWorksheet = orderWorkbook.Sheets[orderSheetName];
-        
-        let orderHeaderRowIndex = -1;
-        const orderRange = XLSX.utils.decode_range(orderWorksheet['!ref']);
-        for(let R = orderRange.s.r; R <= Math.min(orderRange.e.r, 10); ++R) {
-            const rowValues = [];
-            for (let C = orderRange.s.c; C <= orderRange.e.c; ++C) {
-                const cell = orderWorksheet[XLSX.utils.encode_cell({r:R, c:C})];
-                if (cell && cell.v) {
-                    rowValues.push(String(cell.v).trim().toLowerCase());
-                }
-            }
-            if (rowValues.includes('ebeln') && rowValues.includes('belnr')) {
-                orderHeaderRowIndex = R;
-                break;
-            }
-        }
-
-        if (orderHeaderRowIndex === -1) {
-             throw new Error("No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo Excel de ordenamiento. Asegúrate de que el archivo exportado de SAP contenga estas columnas.");
-        }
-        
-        const orderJson = XLSX.utils.sheet_to_json(orderWorksheet, { range: orderHeaderRowIndex }) as any[];
-
-        if (orderJson.length === 0) {
-            throw new Error("El archivo Excel de ordenamiento está vacío o no tiene el formato esperado.");
-        }
-        
-        const belnrHeader = Object.keys(orderJson[0]).find(h => h.trim().toLowerCase() === 'belnr');
-        const ebelnHeader = Object.keys(orderJson[0]).find(h => h.trim().toLowerCase() === 'ebeln');
-
-        if (!belnrHeader || !ebelnHeader) {
-            throw new Error(`El archivo Excel de ordenamiento debe contener las columnas 'BELNR' y 'EBELN'.`);
-        }
-
-        const uniquePairs = new Map<string, { belnr: string, ebeln: string }>();
-        orderJson.forEach((row: any) => {
-            const belnr = String(row[belnrHeader]).trim();
-            const ebeln = String(row[ebelnHeader]).trim();
-            if (belnr && ebeln) {
-                const key = `${belnr}-${ebeln}`;
-                if (!uniquePairs.has(key)) {
-                    uniquePairs.set(key, { belnr, ebeln });
-                }
-            }
-        });
-
-        let processedOrderData = Array.from(uniquePairs.values());
-        processedOrderData.sort((a, b) => {
-            const belnrCompare = a.belnr.localeCompare(b.belnr, undefined, { numeric: true });
-            if (belnrCompare !== 0) return belnrCompare;
-            return a.ebeln.localeCompare(b.ebeln, undefined, { numeric: true });
-        });
-        
-        const orderedEbelns = processedOrderData.map(p => p.ebeln);
-        const uniqueOrderedEbelns = [...new Set(orderedEbelns)];
-        
-        if (uniqueOrderedEbelns.length === 0) {
-            throw new Error("No se encontraron valores de 'EBELN' y 'BELNR' válidos en el archivo de ordenamiento.");
-        }
-        
-        // 2. Read data Excel
-        const dataExcelBuffer = await dataFile.arrayBuffer();
-        const dataWorkbook = XLSX.read(dataExcelBuffer, { type: 'buffer' });
-        const dataSheetName = dataWorkbook.SheetNames[0];
-        const dataWorksheet = dataWorkbook.Sheets[dataSheetName];
-        const dataJson = XLSX.utils.sheet_to_json(dataWorksheet) as any[];
-
-        if (dataJson.length === 0) {
-            throw new Error("El archivo de datos Excel está vacío.");
-        }
-
-        let ordCompraHeader = Object.keys(dataJson[0]).find(h => h.trim().toLowerCase().replace(/\./g, '') === 'ord de compra');
-         if (!ordCompraHeader) {
-            ordCompraHeader = Object.keys(dataJson[0]).find(h => h.trim().toLowerCase() === 'ebeln');
-        }
-
-        if (!ordCompraHeader) {
-            const foundHeaders = Object.keys(dataJson[0]).join(', ');
-             setDebugData({
-                rawText: `Columnas encontradas en el Excel de datos: ${foundHeaders}`,
-                orders: ["Se esperaba el encabezado: 'Ord. de Compra' o 'EBELN'"],
-             })
-            throw new Error(`El archivo de datos debe contener la columna 'Ord. de Compra' o 'EBELN'.`);
-        }
-
-        // 3. Group data rows by 'Ord. de Compra'
-        const dataByEbeln = new Map<string, any[]>();
-        dataJson.forEach(row => {
-            const ebeln = String((row as any)[ordCompraHeader!]).trim();
-            if (!ebeln) return;
-            if (!dataByEbeln.has(ebeln)) {
-                dataByEbeln.set(ebeln, []);
-            }
-            dataByEbeln.get(ebeln)!.push(row);
-        });
-
-        // 4. Create new sorted data array
-        const sortedData: any[] = [];
-        const usedEbelns = new Set<string>();
-
-        uniqueOrderedEbelns.forEach(ebeln => {
-            if (dataByEbeln.has(ebeln)) {
-                sortedData.push(...dataByEbeln.get(ebeln)!);
-                usedEbelns.add(ebeln);
-            }
-        });
-        
-        let unmappedRowsCount = 0;
-        dataJson.forEach(row => {
-            const ebeln = String((row as any)[ordCompraHeader!]).trim();
-            if (ebeln && !usedEbelns.has(ebeln)) {
-                if(dataByEbeln.has(ebeln)) {
-                    const rowsToAdd = dataByEbeln.get(ebeln)!;
-                    sortedData.push(...rowsToAdd);
-                    usedEbelns.add(ebeln);
-                    unmappedRowsCount += rowsToAdd.length;
-                }
-            }
-        });
-
-        if (sortedData.length === 0) {
-            const ebelnsForDebug = uniqueOrderedEbelns.slice(0, 20).join(', ');
-            setDebugData({
-                 rawText: `Cabeceras del archivo de datos: ${Object.keys(dataJson[0]).join(', ')}`,
-                 orders: [`Valores 'Ord. de Compra' / 'EBELN' buscados (primeros 20): ${ebelnsForDebug}`],
-             });
-            throw new Error("No se pudo hacer coincidir ningún dato entre los dos archivos. Revisa que los 'Ord. de Compra' existan en ambos archivos.");
-        }
-
-        // 5. Create and download new Excel file
-        const newWorksheet = XLSX.utils.json_to_sheet(sortedData);
-        const newWorkbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, 'Reporte Ordenado');
-        
-        const newExcelBuffer = XLSX.write(newWorkbook, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([newExcelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        handleDownload(url, `ordenado_${dataFile.name}`);
-
+    if (file) {
+      if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
         toast({
-          title: "Proceso completado",
-          description: `Se reordenaron las filas. ${unmappedRowsCount > 0 ? `${unmappedRowsCount} filas no mapeadas se añadieron al final.` : ''}`,
+          title: "Error de archivo",
+          description: "Por favor, sube un archivo de Excel (.xlsx o .xls).",
+          variant: "destructive",
         });
-        setProcessCompleted(true);
+        return;
+      }
+      resetState();
+      setFileName(file.name);
+      setStatus('parsing');
 
-    } catch (error: any) {
-      console.error("Error processing files:", error);
-      toast({
-        title: "Error al procesar los archivos",
-        description: error.message || "No se pudo completar el proceso. Revisa los archivos e intenta de nuevo.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json<RetailData>(worksheet);
+          
+          const groupedData = processData(jsonData);
+          if (groupedData && groupedData.length > 0) {
+            setProcessedData(groupedData);
+          } else {
+            setStatus('error');
+          }
+        } catch (error) {
+          console.error("Error parsing Excel file:", error);
+          toast({
+            title: "Error al procesar el archivo",
+            description: "No se pudo leer el archivo de Excel. Asegúrate de que el formato sea correcto.",
+            variant: "destructive",
+          });
+          setStatus('error');
+        }
+      };
+      reader.onerror = () => {
+        console.error("Error reading file");
+        toast({ title: "Error al leer el archivo", variant: "destructive" });
+        setStatus('error');
+      }
+      reader.readAsArrayBuffer(file);
     }
   };
 
-  const handleDownload = (url: string, name: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const processData = (data: RetailData[]): GroupedData[] | null => {
+    const grouped = data.reduce<{[key: string]: GroupedData}>((acc, item) => {
+      const docId = getDocId(item);
+      if (docId === undefined || docId === null) return acc;
+
+      if (!acc[docId]) {
+        acc[docId] = {
+          n_doc: docId,
+          items: [],
+          totalCantidad: 0,
+          totalImporte: 0,
+        };
+      }
+      
+      const cantidad = getQuantity(item);
+      const importe = getAmount(item);
+      
+      acc[docId].items.push(item);
+      acc[docId].totalCantidad += cantidad;
+      acc[docId].totalImporte += importe;
+
+      return acc;
+    }, {});
+
+    const groupedArray = Object.values(grouped);
+
+    if (groupedArray.length === 0 && data.length > 0) {
+      const firstRowKeys = Object.keys(data[0]).join(', ');
+      toast({
+        title: "No se pudo agrupar",
+        description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº documento' o 'BELNR' exista. Columnas encontradas: ${firstRowKeys}`,
+        variant: "destructive",
+        duration: 9000,
+      });
+      return null;
+    }
+
+    // Sort by document number
+    groupedArray.sort((a, b) => String(a.n_doc).localeCompare(String(b.n_doc), undefined, { numeric: true }));
+    return groupedArray;
   };
 
+  const handleDownloadPdf = async () => {
+    if (!pdfContentRef.current) {
+        setStatus('error');
+        toast({ title: "Error", description: "No se encontró el contenido para generar el PDF.", variant: "destructive" });
+        return;
+    };
+  
+    setStatus('generating');
+    setProgress(0);
+    cancelPdfGeneration.current = false;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const reportElements = Array.from(pdfContentRef.current.children);
+    let successfulPages = 0;
+    
+    const margin = 5;
+    const imageWidth = pdfWidth - (margin * 2);
+
+    for (let i = 0; i < reportElements.length; i++) {
+      if (cancelPdfGeneration.current) break;
+      const reportElement = reportElements[i] as HTMLElement;
+      if (reportElement) {
+        try {
+            const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95); 
+            
+            if (i > 0) pdf.addPage();
+  
+            const imgProps = pdf.getImageProperties(imgData);
+            const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
+            
+            pdf.addImage(imgData, 'JPEG', margin, margin, imageWidth, imageHeight);
+            successfulPages++;
+            setProgress(((i + 1) / reportElements.length) * 100);
+            
+            await new Promise(resolve => setTimeout(resolve, 10));
+        } catch(e) {
+            console.error(`Error processing page ${i + 1} for PDF:`, e);
+        }
+      }
+    }
+
+    if (cancelPdfGeneration.current) {
+      setStatus('idle');
+      toast({ title: "Generación de PDF cancelada" });
+      return;
+    }
+  
+    if (successfulPages > 0) {
+      try {
+        pdf.save('reporte_retail.pdf');
+        setStatus('success');
+        toast({ title: "¡Éxito! PDF generado.", description: "La descarga de tu archivo ha comenzado." });
+      } catch (e) {
+        console.error("Error saving PDF:", e);
+        toast({ title: "Error al guardar el PDF", description: "El documento es demasiado grande. Intenta con menos datos.", variant: "destructive" });
+        setStatus('error');
+      }
+    } else {
+        toast({ title: "No se generó el PDF", description: "No se pudo procesar ningún reporte.", variant: "destructive" });
+        setStatus('error');
+    }
+  };
+
+  const handleCancelPdfGeneration = () => {
+    cancelPdfGeneration.current = true;
+  };
+  
+  const resetState = () => {
+    setProcessedData(null);
+    setFileName(null);
+    setStatus('idle');
+    setProgress(0);
+    cancelPdfGeneration.current = false;
+    if(fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const renderStatus = () => {
+    switch (status) {
+        case 'parsing':
+            return (
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <p className="text-lg font-semibold text-foreground">Procesando tu archivo Excel...</p>
+                    <p className="text-sm text-muted-foreground">{fileName}</p>
+                </div>
+            );
+        case 'generating':
+            return (
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <Loader2 className="w-16 h-16 text-primary animate-spin" />
+                    <p className="text-lg font-semibold text-foreground">Generando PDF, por favor espera...</p>
+                    <div className="w-full space-y-4">
+                        <Progress value={progress} className="h-6" />
+                        <p className="text-3xl text-center font-bold text-primary animate-pulse tabular-nums">
+                            {Math.round(progress)}%
+                        </p>
+                    </div>
+                    <Button variant="destructive" size="sm" onClick={handleCancelPdfGeneration}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Cancelar
+                    </Button>
+                </div>
+            );
+        case 'success':
+            return (
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <CheckCircle className="w-12 h-12 text-green-600" />
+                    <p className="text-lg font-semibold text-foreground">¡PDF Generado con Éxito!</p>
+                    <p className="text-sm text-muted-foreground">Tu descarga ha comenzado para: {fileName}</p>
+                    <Button onClick={resetState}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Generar Otro Reporte
+                    </Button>
+                </div>
+            );
+        case 'error':
+             return (
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <XCircle className="w-12 h-12 text-destructive" />
+                    <p className="text-lg font-semibold text-foreground">Ocurrió un Error</p>
+                    <p className="text-sm text-muted-foreground">No se pudo generar el reporte. Por favor, revisa el archivo e inténtalo de nuevo.</p>
+                    <Button variant="outline" onClick={resetState}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Intentar de Nuevo
+                    </Button>
+                </div>
+            );
+        case 'idle':
+        default:
+            return (
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <UploadCloud className="w-16 h-16 text-primary" />
+                    <p className="text-lg font-semibold text-foreground">Haz clic para subir tu archivo de Excel</p>
+                    <p className="text-muted-foreground">El PDF se generará y descargará al instante</p>
+                    <Button onClick={() => fileInputRef.current?.click()}>
+                        <Shuffle className="mr-2 h-4 w-4" />
+                        Seleccionar Archivo
+                    </Button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        onChange={handleFileChange}
+                        accept=".xlsx, .xls"
+                    />
+                </div>
+            );
+    }
+  }
 
   return (
-     <main className="container mx-auto px-4 py-12">
+    <main className="container mx-auto px-4 py-12">
       <div className="mb-8">
         <Link href="/" className="inline-flex items-center text-sm font-medium text-primary hover:underline">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -237,197 +326,79 @@ export default function ReporteRetailPage() {
           Reportes de Retail
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Sube dos archivos de Excel para generar un nuevo reporte ordenado.
+          Sube tu reporte de SAP en Excel para generar un PDF para imprimir, ordenado y agrupado por número de documento.
         </p>
       </div>
 
-      <Card className="max-w-4xl mx-auto shadow-lg">
-        <CardHeader>
-          <CardTitle>Organizador de Reportes Excel</CardTitle>
-          <CardDescription>Sube los dos archivos de Excel requeridos para comenzar el proceso.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 grid md:grid-cols-2 gap-8">
-          <div className={cn(
-            "flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg transition-colors",
-            dataFile ? "border-green-500 bg-green-50 dark:bg-green-500/10" : "border-input"
-          )}>
-            {dataFile ? (
-              <FileCheck2 className="w-12 h-12 text-green-500" />
-            ) : (
-              <FileSpreadsheet className="w-12 h-12 text-primary" />
-            )}
-            <p className="text-lg font-semibold text-foreground text-center">
-              {dataFile ? "Datos cargados" : "1. Sube el Excel con los datos"}
-            </p>
-            <p className="text-sm text-muted-foreground h-5 text-center truncate max-w-full px-2" title={fileName.data ?? ''}>
-                {fileName.data}
-            </p>
-            <Button variant="outline" onClick={() => dataInputRef.current?.click()}>
-              {dataFile ? "Cambiar Excel" : "Seleccionar Excel"}
-            </Button>
-            <input ref={dataInputRef} type="file" className="hidden" onChange={(e) => handleFileChange(e, 'data')} accept=".xlsx, .xls" />
-          </div>
-
-          <div className={cn(
-            "flex flex-col items-center justify-center space-y-4 p-6 border-2 border-dashed rounded-lg transition-colors",
-            excelFile ? "border-green-500 bg-green-50 dark:bg-green-500/10" : "border-input"
-          )}>
-            {excelFile ? (
-              <FileCheck2 className="w-12 h-12 text-green-500" />
-            ) : (
-              <FileSpreadsheet className="w-12 h-12 text-primary" />
-            )}
-            <p className="text-lg font-semibold text-foreground text-center">
-              {excelFile ? "Orden cargado" : "2. Sube el Excel con el orden"}
-            </p>
-            <p className="text-sm text-muted-foreground h-5 text-center truncate max-w-full px-2" title={fileName.excel ?? ''}>
-                {fileName.excel}
-            </p>
-            <Button variant="outline" onClick={() => excelInputRef.current?.click()}>
-              {excelFile ? "Cambiar Excel" : "Seleccionar Excel"}
-            </Button>
-            <input ref={excelInputRef} type="file" className="hidden" onChange={(e) => handleFileChange(e, 'excel')} accept=".xlsx, .xls" />
-          </div>
-        </CardContent>
-        <div className="p-6 pt-0 flex justify-center">
-            {loading ? (
-                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Procesando y reordenando el Excel...</p>
-                    <p className="text-sm text-muted-foreground">Esto puede tomar un momento.</p>
-                </div>
-            ) : (
-                <Button 
-                    size="lg" 
-                    onClick={handleProcess} 
-                    disabled={!dataFile || !excelFile}
-                    className={cn(processCompleted && "bg-green-600 hover:bg-green-700")}
-                >
-                  {processCompleted ? <FileCheck2 className="mr-2 h-5 w-5" /> : <Shuffle className="mr-2 h-5 w-5" />}
-                  {processCompleted ? '¡Ordenado! Descargar de nuevo' : 'Ordenar Excel'}
-                </Button>
-            )}
-        </div>
-      </Card>
-
-      {debugData && (
-        <Card className="max-w-4xl mx-auto mt-8">
-          <CardHeader>
-            <CardTitle>Información de Depuración</CardTitle>
-            <CardDescription>
-              No se pudo ordenar ninguna fila. Revisa que la columna 'Ord. de Compra' del Excel de datos coincida con los valores 'EBELN' del Excel de orden.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">Información del archivo de datos:</h4>
-              <pre className="p-4 bg-muted rounded-md text-xs whitespace-pre-wrap max-h-[300px] overflow-auto">
-                {debugData.rawText}
-              </pre>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-2">Información del archivo de ordenamiento:</h4>
-              <p className="p-4 bg-muted rounded-md text-xs">
-                {debugData.orders.join(', ')}
-              </p>
-            </div>
+      <Card className="max-w-2xl mx-auto shadow-lg">
+          <CardContent className="p-8 min-h-[250px] flex items-center justify-center">
+            {renderStatus()}
           </CardContent>
-        </Card>
-      )}
-
-      <section className="max-w-4xl mx-auto mt-12">
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="item-1">
-            <AccordionTrigger className="text-xl font-headline font-semibold text-primary hover:no-underline">
-              Instrucciones para obtener los archivos de SAP
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-6 pt-4 text-base">
-                <div>
-                  <h4 className="font-bold text-lg mb-3 text-foreground/90">Parte 1: Generar el Reporte de Datos (Excel)</h4>
-                  <ol className="list-decimal list-inside space-y-4 text-foreground/80">
-                    <li>
-                      <strong>Generar el reporte principal desde SAP</strong>. Este archivo debe contener toda la información detallada que deseas ordenar.
-                    </li>
-                    <li>
-                      Asegúrate de que el archivo contenga una columna llamada <strong>'Ord. de Compra'</strong> o <strong>'EBELN'</strong>, ya que se usará para el ordenamiento.
-                    </li>
-                     <li>
-                      Exporta este reporte como un archivo de <strong>Excel</strong>.
-                    </li>
-                  </ol>
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="font-bold text-lg mb-3 text-foreground/90">Parte 2: Generar el Archivo de Ordenamiento (Excel)</h4>
-                  <ol className="list-decimal list-inside space-y-4 text-foreground/80">
-                    <li>
-                      <strong>Transacción `SE16`</strong>:
-                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>Ingresa a la transacción `SE16`, escribe la tabla <strong>`EKBE`</strong> y presiona Enter.</li>
-                        <li>Carga la variante: Menú <strong>Pasar a &gt; Variantes &gt; Traer...</strong> y selecciona <strong>`REVOC`</strong>.</li>
-                      </ul>
-                    </li>
-                    <li>
-                      <strong>Filtrar Documentos</strong>:
-                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>En el campo <strong>`BELNR`</strong>, usa la selección múltiple para pegar todos los números de documento que correspondan a tu reporte principal.</li>
-                        <li>Ejecuta la selección (F8).</li>
-                      </ul>
-                    </li>
-                    <li>
-                      <strong>Exportar a Excel</strong>:
-                      <ul className="list-disc list-inside pl-5 mt-2 space-y-1">
-                        <li>Asegúrate de que las columnas `BELNR` y `EBELN` estén visibles.</li>
-                        <li>Ve a <strong>Sistema &gt; Lista &gt; Grabar &gt; Fichero local</strong>.</li>
-                        <li>Elige la opción <strong>"Hoja de cálculo"</strong>.</li>
-                        <li>Guarda el archivo. Este será el archivo de ordenamiento que subirás a la herramienta.</li>
-                      </ul>
-                    </li>
-                  </ol>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </section>
-
-       <section className="mt-16 max-w-4xl mx-auto">
-        <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
-          ¿Cómo funciona?
-        </h3>
-        <div className="grid md:grid-cols-3 gap-8 text-center">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">1</span>
+      </Card>
+      
+      <div className="absolute -left-[9999px] top-0 opacity-0" ref={pdfContentRef}>
+        {processedData?.map((group) => (
+            <div key={group.n_doc} className="p-4 bg-white text-black w-[1123px]">
+              <header className="mb-2">
+                  <h2 className="text-primary text-base font-normal">Reporte Retail - Documento: {group.n_doc}</h2>
+              </header>
+              <Table className="border-collapse text-[8px]">
+                  <TableHeader>
+                    <TableRow className="bg-primary/20 hover:bg-primary/20">
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Ord. de Compra</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nombre Proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Texto de Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Fecha Contab.</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cantidad</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Importe</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {group.items.map((item, itemIndex) => {
+                      let formattedDate = '';
+                      const dateValue = getPostingDate(item);
+                      if (dateValue) {
+                        try {
+                           const date = new Date(dateValue);
+                           if (!Number.isNaN(date.getTime())) {
+                             // Adjust for timezone offset
+                             const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
+                             formattedDate = `${String(adjustedDate.getDate()).padStart(2, '0')}.${String(adjustedDate.getMonth() + 1).padStart(2, '0')}.${adjustedDate.getFullYear()}`;
+                           }
+                        } catch(e) { /* Ignore date parsing errors */ }
+                      }
+                      
+                      return (
+                      <TableRow key={itemIndex}>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getOrder(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getProvider(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getProviderName(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getMaterial(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getMaterialText(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{formattedDate}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{getQuantity(item)?.toFixed(3)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300 font-medium text-[9px]">{getAmount(item)?.toFixed(2)}</TableCell>
+                      </TableRow>
+                      )
+                  })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="bg-accent/30 hover:bg-accent/30 font-bold">
+                      <TableCell colSpan={6} className="px-1 py-1 border border-neutral-300 text-left">TOTAL</TableCell>
+                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                        {group.totalCantidad.toFixed(3)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300 text-[9px]">
+                        {group.totalImporte.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+              </Table>
             </div>
-            <h4 className="text-xl font-semibold text-foreground">Sube tus Archivos</h4>
-            <p className="text-foreground/80">
-              Selecciona el Excel con los datos y el Excel con el orden. El de orden debe tener las columnas 'BELNR' y 'EBELN'.
-            </p>
-          </div>
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">2</span>
-            </div>
-            <h4 className="text-xl font-semibold text-foreground">La Herramienta Procesa</h4>
-            <p className="text-foreground/80">
-              La aplicación lee tu Excel de ordenamiento y lo usa para reordenar las filas de tu Excel de datos según la columna 'Ord. de Compra'.
-            </p>
-          </div>
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">3</span>
-            </div>
-            <h4 className="text-xl font-semibold text-foreground">Descarga el Excel Ordenado</h4>
-            <p className="text-foreground/80">
-              Se genera un nuevo archivo Excel con todas las filas reordenadas secuencialmente según el orden de tu archivo de ordenamiento.
-            </p>
-          </div>
-        </div>
-      </section>
+        ))}
+      </div>
     </main>
   );
 }
-
-    
