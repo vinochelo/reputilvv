@@ -44,13 +44,6 @@ const mainTools: Tool[] = [
 
 const secondaryTools: Tool[] = [
   {
-    title: 'Reporte Venta en Verde (Alternativo)',
-    description: 'Nuevo método para generar reportes de venta en verde.',
-    href: '/reporte-venta-verde-alternativo',
-    icon: FileText,
-    status: 'beta',
-  },
-  {
     title: 'Control de retenciones (Beta)',
     description: 'Nueva versión en desarrollo para gestionar retenciones con IA.',
     href: '/control-retenciones-beta',
