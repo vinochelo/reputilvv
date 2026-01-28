@@ -16,7 +16,7 @@ import Link from 'next/link';
 type Status = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
 type RetailData = { [key: string]: any };
 type GroupedData = {
-  n_doc: number | string;
+  n_doc: number | string; // This will hold the Purchase Order number
   items: RetailData[];
   totalCantidad: number;
   totalImporte: number;
@@ -35,16 +35,15 @@ const getValue = (item: any, keys: string[]): any => {
     return undefined;
 };
 
-// Accessor functions for specific fields
-const getDocId = (item: RetailData) => getValue(item, ['nºdocumento', 'belnr', 'nro.documento']);
-const getOrder = (item: RetailData) => getValue(item, ['ord.decompra', 'ebeln', 'orden de compra']);
+// Accessor functions for specific fields, now more robust
+const getOrder = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
 const getProvider = (item: RetailData) => getValue(item, ['proveedor', 'lifnr']);
-const getProviderName = (item: RetailData) => getValue(item, ['nombredelproveedor']);
+const getProviderName = (item: RetailData) => getValue(item, ['nombre proveedor', 'nombredelproveedor']);
 const getMaterial = (item: RetailData) => getValue(item, ['material']);
-const getMaterialText = (item: RetailData) => getValue(item, ['textobrevedematerial']);
-const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cantidad', 'menge'])) || 0;
-const getAmount = (item: RetailData) => parseFloat(getValue(item, ['importeenmon.local', 'wrbtr'])) || 0;
-const getPostingDate = (item: RetailData) => getValue(item, ['fechacontab.', 'bldat']);
+const getMaterialText = (item: RetailData) => getValue(item, ['descripcion material', 'textobrevedematerial']);
+const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cant. in.', 'cantidad', 'menge'])) || 0;
+const getAmount = (item: RetailData) => parseFloat(getValue(item, ['costo total.', 'costo total', 'importeenmon.local', 'wrbtr'])) || 0;
+const getPostingDate = (item: RetailData) => getValue(item, ['fecha ingreso', 'fechacontab.', 'bldat']);
 
 
 export default function ReporteRetailPage() {
@@ -91,42 +90,27 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ebeln', 'ord.decompra', 'orden de compra']);
+    const getPurchaseOrderFromOrderFile = (item: any) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
     
-    // 1. Get the ordered list of purchase orders from the 'order' file.
-    const orderedPurchaseOrders = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined);
+    // 1. Get the unique, ordered list of purchase orders from the 'order' file.
+    const orderedPurchaseOrdersWithDuplicates = orderData.map(getPurchaseOrderFromOrderFile).filter(po => po !== undefined);
+    const orderedPurchaseOrders = [...new Set(orderedPurchaseOrdersWithDuplicates)];
 
     if (orderedPurchaseOrders.length === 0) {
         toast({ title: "Error en archivo de orden", description: "No se encontraron 'ordenes de compra' (ej: columna EBELN) en el archivo de orden para establecer la secuencia.", variant: "destructive" });
         return null;
     }
 
-    // 2. Create a map from Purchase Order -> Document Number from the main data.
-    // We convert the PO to a string and trim it to avoid type mismatches (e.g., number vs string) and whitespace issues.
-    const poToDocNumMap = new Map<string, any>();
-    mainData.forEach(item => {
-        const po = getOrder(item);
-        const docId = getDocId(item);
-        if (po !== undefined && docId !== undefined) {
-            poToDocNumMap.set(String(po).trim(), docId);
-        }
-    });
+    // 2. Group mainData by purchase order.
+    const groupedByPo = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
+      const po = getOrder(item);
+      if (po === undefined || po === null) return acc;
 
-    // 3. Create an ordered list of document numbers based on the purchase order sequence.
-    const orderedDocIdsWithDuplicates = orderedPurchaseOrders
-      .map(po => poToDocNumMap.get(String(po).trim())) // Also convert to string for lookup
-      .filter(docId => docId !== undefined);
+      const poKey = String(po).trim();
 
-    const orderedDocIds = [...new Set(orderedDocIdsWithDuplicates)];
-    
-    // 4. Group mainData by document number.
-    const grouped = mainData.reduce<{[key: string]: GroupedData}>((acc, item) => {
-      const docId = getDocId(item);
-      if (docId === undefined || docId === null) return acc;
-
-      if (!acc[docId]) {
-        acc[docId] = {
-          n_doc: docId,
+      if (!acc[poKey]) {
+        acc[poKey] = {
+          n_doc: po, // The group key is now the Purchase Order number
           items: [],
           totalCantidad: 0,
           totalImporte: 0,
@@ -136,18 +120,19 @@ export default function ReporteRetailPage() {
       const cantidad = getQuantity(item);
       const importe = getAmount(item);
       
-      acc[docId].items.push(item);
-      acc[docId].totalCantidad += cantidad;
-      acc[docId].totalImporte += importe;
+      acc[poKey].items.push(item);
+      acc[poKey].totalCantidad += cantidad;
+      acc[poKey].totalImporte += importe;
 
       return acc;
     }, {});
     
-    // 5. Build the final sorted list for the PDF.
+    // 3. Build the final sorted list for the PDF based on the order file.
     const finalGroupedData: GroupedData[] = [];
-    for (const docId of orderedDocIds) {
-        if (grouped[docId]) {
-            finalGroupedData.push(grouped[docId]);
+    for (const po of orderedPurchaseOrders) {
+        const poKey = String(po).trim();
+        if (groupedByPo[poKey]) {
+            finalGroupedData.push(groupedByPo[poKey]);
         }
     }
 
@@ -418,7 +403,7 @@ export default function ReporteRetailPage() {
         {processedData?.map((group) => (
             <div key={group.n_doc} className="p-4 bg-white text-black w-[1123px]">
               <header className="mb-2">
-                  <h2 className="text-primary text-base font-normal">Reporte Retail - Documento: {group.n_doc}</h2>
+                  <h2 className="text-primary text-base font-normal">Reporte Retail - Orden de Compra: {group.n_doc}</h2>
               </header>
               <Table className="border-collapse text-[8px]">
                   <TableHeader>
@@ -427,10 +412,10 @@ export default function ReporteRetailPage() {
                       <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Proveedor</TableHead>
                       <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nombre Proveedor</TableHead>
                       <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Material</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Texto de Material</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Fecha Contab.</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cantidad</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Importe</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Descripcion Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Fecha Ingreso</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cant. In.</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Costo Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -479,3 +464,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
