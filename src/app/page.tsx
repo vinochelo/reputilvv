@@ -44,6 +44,13 @@ const mainTools: Tool[] = [
 
 const secondaryTools: Tool[] = [
   {
+    title: 'Reporte Venta en Verde (Alternativo)',
+    description: 'Nuevo método para generar reportes de venta en verde.',
+    href: '/reporte-venta-verde-alternativo',
+    icon: FileText,
+    status: 'beta',
+  },
+  {
     title: 'Control de retenciones (Beta)',
     description: 'Nueva versión en desarrollo para gestionar retenciones con IA.',
     href: '/control-retenciones-beta',
@@ -95,11 +102,11 @@ export default function Home() {
       <section className="bg-muted/30 dark:bg-muted/10 border-b">
         <div className="container mx-auto px-4 py-8 sm:py-12">
           <div className="text-center">
-            <div className="flex justify-center items-baseline gap-1 mb-6" aria-label="ETAFASHION RM">
-              <span className="font-headline font-light text-foreground text-5xl sm:text-6xl">
+            <div className="flex justify-center items-baseline gap-1 mb-2" aria-label="ETAFASHION RM">
+              <span className="font-headline font-light text-foreground text-5xl">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl">
+              <span className="font-headline font-bold text-destructive text-5xl">
                 RM
               </span>
             </div>
