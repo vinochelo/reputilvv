@@ -70,11 +70,10 @@ const ToolCard = ({ tool }: { tool: Tool }) => (
         <Card className="h-full flex flex-col p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl rounded-2xl border-2 border-transparent hover:border-primary/50 bg-card/50 dark:bg-card">
             <div className="flex-grow">
                 <div className={cn(
-                    "bg-primary/10 p-3 rounded-full self-start inline-block mb-4", 
-                    { "bg-destructive/10": tool.status === 'beta' }
+                    "bg-primary/10 p-3 rounded-full self-start inline-block mb-4"
                 )}>
                     <tool.icon className={cn(
-                        "w-6 h-6 text-primary transition-transform duration-500 group-hover:rotate-[360deg]", 
+                        "w-6 h-6 text-primary transition-transform duration-500 group-hover:rotate-[360deg] group-hover:scale-110",
                         { "text-destructive": tool.status === 'beta' }
                     )} />
                 </div>
@@ -94,13 +93,13 @@ export default function Home() {
   return (
     <main>
       <section className="bg-muted/30 dark:bg-muted/10 border-b">
-        <div className="container mx-auto px-4 py-12 sm:py-16">
+        <div className="container mx-auto px-4 py-8 sm:py-12">
           <div className="text-center">
-            <div className="flex justify-center items-baseline gap-1 mb-8" aria-label="ETAFASHION RM">
-              <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
+            <div className="flex justify-center items-baseline gap-1 mb-6" aria-label="ETAFASHION RM">
+              <span className="font-headline font-light text-foreground text-5xl sm:text-6xl">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-7xl">
+              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl">
                 RM
               </span>
             </div>
