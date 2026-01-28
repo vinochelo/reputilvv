@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -93,13 +94,13 @@ export default function Home() {
   return (
     <main>
       <section className="bg-muted/30 dark:bg-muted/10 border-b">
-        <div className="container mx-auto px-4 py-16 sm:py-24">
+        <div className="container mx-auto px-4 py-12 sm:py-16">
           <div className="text-center">
             <div className="flex justify-center items-baseline gap-1 mb-8" aria-label="ETAFASHION RM">
               <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-7xl sm:text-8xl">
+              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-7xl">
                 RM
               </span>
             </div>
