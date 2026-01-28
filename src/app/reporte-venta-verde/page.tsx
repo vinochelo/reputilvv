@@ -263,11 +263,13 @@ export default function ReporteVentaVerdePage() {
         case 'generating':
             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <Loader2 className="w-16 h-16 text-primary animate-spin" />
                     <p className="text-lg font-semibold text-foreground">Generando PDF, por favor espera...</p>
-                    <div className="w-full space-y-2">
-                        <Progress value={progress} className="h-4" />
-                        <p className="text-base text-center font-semibold text-primary">{Math.round(progress)}%</p>
+                    <div className="w-full space-y-4">
+                        <Progress value={progress} className="h-6" />
+                        <p className="text-3xl text-center font-bold text-primary animate-pulse tabular-nums">
+                            {Math.round(progress)}%
+                        </p>
                     </div>
                     <Button variant="destructive" size="sm" onClick={handleCancelPdfGeneration}>
                         <XCircle className="mr-2 h-4 w-4" />
