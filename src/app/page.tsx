@@ -99,7 +99,7 @@ export default function Home() {
               <span className="font-headline font-light text-foreground text-5xl sm:text-6xl md:text-7xl tracking-wider">
                 ETAFASHION
               </span>
-              <span className="font-headline font-bold text-destructive text-5xl sm:text-6xl md:text-7xl">
+              <span className="font-headline font-bold text-destructive text-7xl sm:text-8xl md:text-9xl">
                 RM
               </span>
             </div>
@@ -139,6 +139,9 @@ export default function Home() {
           </Accordion>
         </div>
       </section>
+      <footer className="text-center py-8 text-sm text-foreground/60">
+        <p>© 2026 Rocku. Todos los derechos reservados.</p>
+      </footer>
     </main>
   );
 }
