@@ -45,31 +45,99 @@ const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cant. in.'
 const getAmount = (item: RetailData) => parseFloat(getValue(item, ['costo total.', 'costo total', 'importeenmon.local', 'wrbtr'])) || 0;
 const getPostingDate = (item: RetailData) => getValue(item, ['fecha ingreso', 'fechacontab.', 'bldat']);
 
-const readExcelFile = (file: File, xlsxOptions?: XLSX.Sheet2JSONOpts): Promise<any[]> => {
+const readMainDataFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
+                if (!data) return reject(new Error(`El archivo de datos ${file.name} está vacío.`));
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                 const worksheet = workbook.Sheets[sheetName];
                 
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, xlsxOptions);
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: 3 });
 
                 if (jsonData.length === 0) {
-                    return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
+                    return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que los datos comiencen en la fila 4.`));
                 }
 
                 resolve(jsonData);
             } catch (err: any) {
-                reject(new Error(`Error al procesar ${file.name}: ${err.message}`));
+                reject(new Error(`Error al procesar el archivo de datos ${file.name}: ${err.message}`));
             }
         };
         reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
         reader.readAsArrayBuffer(file);
+    });
+};
+
+const readOrderFileAsHTML = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const htmlContent = e.target?.result as string;
+                if (!htmlContent) {
+                    return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
+                }
+
+                const tableContentMatch = htmlContent.match(/<table[\s\S]*?>([\s\S]*)<\/table>/i);
+                if (!tableContentMatch) {
+                    return reject(new Error("No se pudo encontrar una etiqueta <table> en el archivo de orden."));
+                }
+
+                const rowsHtml = tableContentMatch[1].match(/<tr[\s\S]*?>([\s\S]*?)<\/tr>/gi);
+                if (!rowsHtml) {
+                    return reject(new Error("No se encontraron filas (<tr>) en la tabla del archivo de orden."));
+                }
+
+                const allRows = rowsHtml.map(rowHtml => {
+                    const cellsHtml = rowHtml.match(/<td[\s\S]*?>([\s\S]*?)<\/td>/gi);
+                    return cellsHtml ? cellsHtml.map(cellHtml => cellHtml.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim()) : [];
+                });
+
+                let headerRowIndex = -1;
+                let headerMap: { [key: string]: number } = {};
+                for (let i = 0; i < allRows.length; i++) {
+                    const cells = allRows[i].map(c => c.toUpperCase());
+                    const ebelnIndex = cells.findIndex(c => c.includes("EBELN"));
+                    const belnrIndex = cells.findIndex(c => c.includes("BELNR"));
+                    if (ebelnIndex !== -1 && belnrIndex !== -1) {
+                        headerRowIndex = i;
+                        headerMap['ebeln'] = ebelnIndex;
+                        headerMap['belnr'] = belnrIndex;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    return reject(new Error("No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden."));
+                }
+                
+                const dataRows = allRows.slice(headerRowIndex + 1);
+                const jsonData = dataRows.map(rowCells => {
+                    const ebeln = rowCells[headerMap['ebeln']] || "";
+                    const belnr = rowCells[headerMap['belnr']] || "";
+                    if (ebeln || belnr) {
+                        return { 'Ord. de compra': ebeln, 'Documento no.': belnr };
+                    }
+                    return null;
+                }).filter(item => item !== null);
+
+                if (jsonData.length === 0) {
+                     return reject(new Error("No se extrajeron datos de las columnas 'EBELN' y 'BELNR' del archivo de orden."));
+                }
+
+                resolve(jsonData as any[]);
+
+            } catch (err: any) {
+                reject(new Error(`Error al procesar el archivo HTML de orden ${file.name}: ${err.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
+        reader.readAsText(file);
     });
 };
 
@@ -98,10 +166,6 @@ export default function ReporteRetailPage() {
   const handleDataFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-        toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
-        return;
-      }
       setDataFile(file);
     }
   };
@@ -109,10 +173,6 @@ export default function ReporteRetailPage() {
   const handleOrderFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-        toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
-        return;
-      }
       setOrderFile(file);
     }
   };
@@ -128,8 +188,6 @@ export default function ReporteRetailPage() {
     const getDocNo = (item: any) => getValue(item, ['documento no.', 'belnr']);
     const getPoNo = (item: any) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
 
-    // Step 1: Process the main data file into a map for quick lookups.
-    // Group all items by their Purchase Order (PO) number.
     const poToItemsMap = new Map<string, RetailData[]>();
     for (const item of mainData) {
         const po = getPoNo(item);
@@ -149,8 +207,6 @@ export default function ReporteRetailPage() {
         return null;
     }
 
-    // Step 2: Process the order file to define the structure and order of the final report.
-    // It creates an ordered map from Document Number to a set of PO numbers.
     const docToPoMap = new Map<string, Set<string>>();
     for (const item of orderData) {
         const docNo = getDocNo(item);
@@ -174,8 +230,6 @@ export default function ReporteRetailPage() {
         return null;
     }
     
-    // Step 3: Combine the data. Iterate through the ordered documents from the order file,
-    // look up the corresponding items from the main data map, and build the final structure.
     const finalGroupedData: GroupedData[] = [];
     
     for (const [docKey, poNumbers] of docToPoMap.entries()) {
@@ -210,14 +264,12 @@ export default function ReporteRetailPage() {
       return null;
     }
 
-    // Step 4: Sort the final result by document number to ensure correct order.
     finalGroupedData.sort((a, b) => {
         const numA = Number(a.n_doc);
         const numB = Number(b.n_doc);
         if (!isNaN(numA) && !isNaN(numB)) {
             return numA - numB;
         }
-        // Fallback to string comparison if they are not numbers
         return String(a.n_doc).localeCompare(String(b.n_doc));
     });
 
@@ -226,7 +278,7 @@ export default function ReporteRetailPage() {
 
   const handleGenerateReport = async () => {
     if (!dataFile || !orderFile) {
-        toast({ title: "Faltan archivos", description: "Por favor, selecciona ambos archivos Excel.", variant: "destructive" });
+        toast({ title: "Faltan archivos", description: "Por favor, selecciona ambos archivos.", variant: "destructive" });
         return;
     }
 
@@ -234,8 +286,8 @@ export default function ReporteRetailPage() {
     
     try {
         const [mainData, orderData] = await Promise.all([
-            readExcelFile(dataFile, { range: 3 }),
-            readExcelFile(orderFile, { range: 3 })
+            readMainDataFile(dataFile),
+            readOrderFileAsHTML(orderFile)
         ]);
 
         const groupedAndSortedData = processData(mainData, orderData);
@@ -347,7 +399,7 @@ export default function ReporteRetailPage() {
             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Procesando tus archivos Excel...</p>
+                    <p className="text-lg font-semibold text-foreground">Procesando tus archivos...</p>
                     <p className="text-sm text-muted-foreground">{dataFile?.name} & {orderFile?.name}</p>
                 </div>
             );
@@ -409,7 +461,7 @@ export default function ReporteRetailPage() {
                       <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
                           <UploadCloud className="w-12 h-12 text-primary/70" />
                           <p className="font-semibold mt-2">2. Archivo de Orden</p>
-                          <p className="text-xs text-muted-foreground">Excel que define el orden.</p>
+                          <p className="text-xs text-muted-foreground">HTML de SAP guardado como .xls.</p>
                           <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
                               Seleccionar Archivo
                           </Button>
