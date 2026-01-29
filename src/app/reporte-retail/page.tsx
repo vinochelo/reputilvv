@@ -182,6 +182,17 @@ export default function ReporteRetailPage() {
       return null;
     }
 
+    // Step 4: Sort the final result by document number to ensure correct order.
+    finalGroupedData.sort((a, b) => {
+        const numA = Number(a.n_doc);
+        const numB = Number(b.n_doc);
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+        }
+        // Fallback to string comparison if they are not numbers
+        return String(a.n_doc).localeCompare(String(b.n_doc));
+    });
+
     return finalGroupedData;
   };
 
@@ -514,5 +525,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
