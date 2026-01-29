@@ -244,8 +244,8 @@ export default function ReporteRetailPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = e.target?.result;
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    const data = e.target?.result as string; // Read as string for HTML parsing
+                    const workbook = XLSX.read(data, { type: 'string' });
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
                     
@@ -305,7 +305,7 @@ export default function ReporteRetailPage() {
                 }
             };
             reader.onerror = () => reject(new Error("Error al leer el archivo de orden."));
-            reader.readAsArrayBuffer(orderFile);
+            reader.readAsText(orderFile); // Read as text, not array buffer
         });
 
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
