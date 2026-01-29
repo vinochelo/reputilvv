@@ -244,31 +244,41 @@ export default function ReporteRetailPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = e.target?.result as string; // Read as string for HTML parsing
-                    const workbook = XLSX.read(data, { type: 'string' });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    
-                    const dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+                    const htmlString = e.target?.result as string;
+                    if (!htmlString) {
+                         return reject(new Error("No se pudo leer el contenido del archivo de orden."));
+                    }
 
-                    if (!dataRows || dataRows.length === 0) {
-                        return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlString, "text/html");
+                    
+                    const tables = doc.querySelectorAll("table");
+                    if (tables.length === 0) {
+                        return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
                     }
                     
-                    const rawDataSample = JSON.stringify(dataRows.slice(0, 10));
+                    let mainTable = tables[0];
+                    if (tables.length > 1) {
+                        mainTable = Array.from(tables).reduce((p, c) => c.rows.length > p.rows.length ? c : p, tables[0]);
+                    }
 
+                    const dataRows = Array.from(mainTable.rows).map(row => 
+                        Array.from(row.cells).map(cell => cell.textContent?.trim() ?? '')
+                    );
+
+                    if (dataRows.length === 0) {
+                        return reject(new Error("La tabla encontrada en el archivo de orden está vacía."));
+                    }
+                    
                     let headerRowIndex = -1;
                     let headers: string[] = [];
 
-                    // Find header row by looking for technical SAP columns
                     for (let i = 0; i < dataRows.length; i++) {
-                        const row = dataRows[i] as any[];
-                        if (!Array.isArray(row)) continue;
-
-                        const hasEbelnColumn = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN');
-                        const hasBelnrColumn = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'BELNR');
+                        const row = dataRows[i];
+                        const hasEbeln = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN');
+                        const hasBelnr = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'BELNR');
                         
-                        if (hasEbelnColumn && hasBelnrColumn) {
+                        if (hasEbeln && hasBelnr) {
                             headerRowIndex = i;
                             headers = row.map(cell => String(cell || '').trim());
                             break;
@@ -276,18 +286,19 @@ export default function ReporteRetailPage() {
                     }
 
                     if (headerRowIndex === -1) {
+                         const rawDataSample = JSON.stringify(dataRows.slice(0, 5));
                          const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga las columnas 'EBELN' y 'BELNR'. Muestra de datos leídos: ${rawDataSample}`;
                          return reject(new Error(errorMessage));
                     }
 
                     const jsonData = [];
                     for (let i = headerRowIndex + 1; i < dataRows.length; i++) {
-                        const row = dataRows[i] as any[];
-                        if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue; // Skip empty rows
+                        const row = dataRows[i];
+                        if (row.every(cell => !cell)) continue;
 
                         const obj: { [key: string]: any } = {};
                         headers.forEach((header, index) => {
-                            if (header) { // Only add if header is not empty
+                            if (header) {
                                 obj[header] = row[index];
                             }
                         });
@@ -295,17 +306,16 @@ export default function ReporteRetailPage() {
                     }
 
                     if (jsonData.length === 0) {
-                        const errorMessage = `El archivo de orden no contiene filas de datos después de la fila de encabezado. Muestra de datos leídos: ${rawDataSample}`;
-                        return reject(new Error(errorMessage));
+                        return reject(new Error("El archivo de orden no contiene filas de datos después de la fila de encabezado."));
                     }
                     
                     resolve(jsonData);
                 } catch (err: any) {
-                    reject(new Error("Error al procesar el archivo de orden: " + err.message));
+                    reject(new Error("Error al procesar el archivo de orden como HTML: " + err.message));
                 }
             };
-            reader.onerror = () => reject(new Error("Error al leer el archivo de orden."));
-            reader.readAsText(orderFile); // Read as text, not array buffer
+            reader.onerror = () => reject(new Error("No se pudo leer el archivo de orden."));
+            reader.readAsText(orderFile);
         });
 
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
@@ -596,5 +606,7 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
 
     
