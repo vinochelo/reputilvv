@@ -260,7 +260,12 @@ export default function ReporteRetailPage() {
                     // Find header row by looking for key columns
                     for (let i = 0; i < dataRows.length; i++) {
                         const row = dataRows[i] as any[];
-                        if (row.some(cell => typeof cell === 'string' && (cell.toUpperCase().includes('BELNR') || cell.toUpperCase().includes('EBELN')))) {
+                        if (!Array.isArray(row)) continue;
+
+                        const hasDocColumn = row.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('documento'));
+                        const hasOrderColumn = row.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('orden'));
+                        
+                        if (hasDocColumn && hasOrderColumn) {
                             headerRowIndex = i;
                             headers = row.map(cell => String(cell || '').trim());
                             break;
@@ -268,7 +273,7 @@ export default function ReporteRetailPage() {
                     }
 
                     if (headerRowIndex === -1) {
-                        return reject(new Error("No se pudo encontrar la fila de encabezado (con BELNR o EBELN) en el archivo de orden."));
+                         return reject(new Error("No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga columnas para 'documento' y 'orden'."));
                     }
 
                     const jsonData = [];
