@@ -260,15 +260,15 @@ export default function ReporteRetailPage() {
                     let headerRowIndex = -1;
                     let headers: string[] = [];
 
-                    // Find header row by looking for key columns
+                    // Find header row by looking for technical SAP columns
                     for (let i = 0; i < dataRows.length; i++) {
                         const row = dataRows[i] as any[];
                         if (!Array.isArray(row)) continue;
 
-                        const hasDocColumn = row.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('documento'));
-                        const hasOrderColumn = row.some(cell => typeof cell === 'string' && cell.toLowerCase().includes('orden'));
+                        const hasEbelnColumn = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN');
+                        const hasBelnrColumn = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'BELNR');
                         
-                        if (hasDocColumn && hasOrderColumn) {
+                        if (hasEbelnColumn && hasBelnrColumn) {
                             headerRowIndex = i;
                             headers = row.map(cell => String(cell || '').trim());
                             break;
@@ -276,7 +276,7 @@ export default function ReporteRetailPage() {
                     }
 
                     if (headerRowIndex === -1) {
-                         const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga columnas para 'documento' y 'orden'. Muestra de datos leídos: ${rawDataSample}`;
+                         const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga las columnas 'EBELN' y 'BELNR'. Muestra de datos leídos: ${rawDataSample}`;
                          return reject(new Error(errorMessage));
                     }
 
@@ -596,3 +596,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
