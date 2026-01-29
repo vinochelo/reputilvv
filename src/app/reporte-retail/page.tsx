@@ -45,6 +45,34 @@ const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cant. in.'
 const getAmount = (item: RetailData) => parseFloat(getValue(item, ['costo total.', 'costo total', 'importeenmon.local', 'wrbtr'])) || 0;
 const getPostingDate = (item: RetailData) => getValue(item, ['fecha ingreso', 'fechacontab.', 'bldat']);
 
+const readExcelFile = (file: File, xlsxOptions?: XLSX.Sheet2JSONOpts): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
+                const worksheet = workbook.Sheets[sheetName];
+                
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, xlsxOptions);
+
+                if (jsonData.length === 0) {
+                    return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
+                }
+
+                resolve(jsonData);
+            } catch (err: any) {
+                reject(new Error(`Error al procesar ${file.name}: ${err.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
+        reader.readAsArrayBuffer(file);
+    });
+};
+
 
 export default function ReporteRetailPage() {
   const [dataFile, setDataFile] = useState<File | null>(null);
@@ -205,34 +233,6 @@ export default function ReporteRetailPage() {
     setStatus('parsing');
     
     try {
-        const readExcelFile = (file: File, xlsxOptions?: XLSX.Sheet2JSONOpts): Promise<any[]> => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = e.target?.result;
-                        if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        const sheetName = workbook.SheetNames[0];
-                        if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
-                        const worksheet = workbook.Sheets[sheetName];
-                        
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet, xlsxOptions);
-
-                        if (jsonData.length === 0) {
-                            return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
-                        }
-
-                        resolve(jsonData);
-                    } catch (err: any) {
-                        reject(new Error(`Error al procesar ${file.name}: ${err.message}`));
-                    }
-                };
-                reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
-                reader.readAsArrayBuffer(file);
-            });
-        };
-        
         const [mainData, orderData] = await Promise.all([
             readExcelFile(dataFile, { range: 3 }),
             readExcelFile(orderFile, { range: 3 })
@@ -525,3 +525,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
