@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -81,10 +80,7 @@ export default function ReporteRetailPage() {
   const handleOrderFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-          toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
-          return;
-      }
+      // We are not strictly validating the extension because it might be an HTML file saved as .xls
       setOrderFile(file);
     }
   };
@@ -251,15 +247,51 @@ export default function ReporteRetailPage() {
                     const workbook = XLSX.read(data, { type: 'array' });
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
-                    const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
                     
-                    if (!jsonData || jsonData.length === 0) {
+                    const dataRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+
+                    if (!dataRows || dataRows.length === 0) {
+                        return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
+                    }
+
+                    let headerRowIndex = -1;
+                    let headers: string[] = [];
+
+                    // Find header row by looking for key columns
+                    for (let i = 0; i < dataRows.length; i++) {
+                        const row = dataRows[i] as any[];
+                        if (row.some(cell => typeof cell === 'string' && (cell.toUpperCase().includes('BELNR') || cell.toUpperCase().includes('EBELN')))) {
+                            headerRowIndex = i;
+                            headers = row.map(cell => String(cell || '').trim());
+                            break;
+                        }
+                    }
+
+                    if (headerRowIndex === -1) {
+                        return reject(new Error("No se pudo encontrar la fila de encabezado (con BELNR o EBELN) en el archivo de orden."));
+                    }
+
+                    const jsonData = [];
+                    for (let i = headerRowIndex + 1; i < dataRows.length; i++) {
+                        const row = dataRows[i] as any[];
+                        if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue; // Skip empty rows
+
+                        const obj: { [key: string]: any } = {};
+                        headers.forEach((header, index) => {
+                            if (header) { // Only add if header is not empty
+                                obj[header] = row[index];
+                            }
+                        });
+                        jsonData.push(obj);
+                    }
+
+                    if (jsonData.length === 0) {
                          return reject(new Error("El archivo de orden parece estar vacío o no pudo ser leído correctamente."));
                     }
                     
                     resolve(jsonData);
                 } catch (err: any) {
-                    reject(new Error("Error al procesar el archivo de orden. " + err.message));
+                    reject(new Error("Error al procesar el archivo de orden: " + err.message));
                 }
             };
             reader.onerror = () => reject(new Error("Error al leer el archivo de orden."));
@@ -444,7 +476,7 @@ export default function ReporteRetailPage() {
                       <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
                           <UploadCloud className="w-12 h-12 text-primary/70" />
                           <p className="font-semibold mt-2">2. Archivo de Orden</p>
-                          <p className="text-xs text-muted-foreground">Excel (HTML) que define el orden.</p>
+                          <p className="text-xs text-muted-foreground">Excel que define el orden (HTML/.xls).</p>
                           <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
                               Seleccionar Archivo
                           </Button>
@@ -458,7 +490,7 @@ export default function ReporteRetailPage() {
                   </Button>
 
                   <input ref={dataFileInputRef} type="file" className="hidden" onChange={handleDataFileChange} accept=".xlsx, .xls" />
-                  <input ref={orderFileInputRef} type="file" className="hidden" onChange={handleOrderFileChange} accept=".xlsx, .xls" />
+                  <input ref={orderFileInputRef} type="file" className="hidden" onChange={handleOrderFileChange} accept=".xlsx, .xls, .html" />
               </div>
             );
     }
