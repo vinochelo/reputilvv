@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -103,7 +104,6 @@ export default function ReporteRetailPage() {
     // Accessor for Data File
     const getPoFromDataFile = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
     
-    // --- Start of new diagnostic logic ---
     const orderFilePOs = new Set(orderData.map(item => normalizePO(getPoFromOrderFile(item))).filter(Boolean));
     if (orderFilePOs.size === 0) {
         toast({ title: "Error en Archivo de Orden", description: "No se encontraron valores válidos en la columna 'Orden de Compra' / 'ebeln'.", variant: "destructive" });
@@ -128,7 +128,6 @@ export default function ReporteRetailPage() {
         });
         return null;
     }
-    // --- End of new diagnostic logic ---
 
     // 1. Process Order File to get an ordered list of documents and a map from DocNo to POs
     const docToPoMap = new Map<string, string[]>();
@@ -254,7 +253,7 @@ export default function ReporteRetailPage() {
         };
         
         const [mainData, orderData] = await Promise.all([
-            readExcelFile(dataFile),
+            readExcelFile(dataFile, { range: 3 }),
             readExcelFile(orderFile, { range: 3 })
         ]);
 
