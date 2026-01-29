@@ -225,7 +225,7 @@ export default function ReporteRetailPage() {
     setStatus('parsing');
     
     try {
-        const readExcelFile = (file: File): Promise<any[]> => {
+        const readExcelFile = (file: File, xlsxOptions?: XLSX.Sheet2JSONOpts): Promise<any[]> => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -237,7 +237,7 @@ export default function ReporteRetailPage() {
                         if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                         const worksheet = workbook.Sheets[sheetName];
                         
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, xlsxOptions);
 
                         if (jsonData.length === 0) {
                             return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
@@ -255,7 +255,7 @@ export default function ReporteRetailPage() {
         
         const [mainData, orderData] = await Promise.all([
             readExcelFile(dataFile),
-            readExcelFile(orderFile)
+            readExcelFile(orderFile, { range: 3 })
         ]);
 
         const groupedAndSortedData = processData(mainData, orderData);
