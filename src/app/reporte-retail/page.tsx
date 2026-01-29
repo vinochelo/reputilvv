@@ -249,7 +249,7 @@ export default function ReporteRetailPage() {
                         return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
                     }
 
-                    const workbook = XLSX.read(data, { type: 'array', cellHTML: true });
+                    const workbook = XLSX.read(data, { type: 'binary', cellHTML: true });
                     
                     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
                          return reject(new Error("No se encontraron hojas de cálculo en el archivo de orden después de procesarlo."));
@@ -311,7 +311,7 @@ export default function ReporteRetailPage() {
                 }
             };
             reader.onerror = () => reject(new Error("No se pudo leer el archivo de orden."));
-            reader.readAsArrayBuffer(orderFile);
+            reader.readAsBinaryString(orderFile);
         });
 
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
