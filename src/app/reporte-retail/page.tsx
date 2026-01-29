@@ -244,13 +244,12 @@ export default function ReporteRetailPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const fileContent = e.target?.result as string;
-                    if (!fileContent || fileContent.trim() === '') {
+                    const data = e.target?.result;
+                    if (!data) {
                         return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
                     }
 
-                    // Use xlsx to parse the binary string, which may be HTML-like
-                    const workbook = XLSX.read(fileContent, { type: 'binary', cellHTML: true });
+                    const workbook = XLSX.read(data, { type: 'array', cellHTML: true });
                     
                     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
                          return reject(new Error("No se encontraron hojas de cálculo en el archivo de orden después de procesarlo."));
@@ -258,7 +257,6 @@ export default function ReporteRetailPage() {
 
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
-                    // Read as array of arrays to manually find the header
                     const jsonDataAsArray = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
 
                     if (!jsonDataAsArray || jsonDataAsArray.length === 0) {
@@ -313,7 +311,7 @@ export default function ReporteRetailPage() {
                 }
             };
             reader.onerror = () => reject(new Error("No se pudo leer el archivo de orden."));
-            reader.readAsBinaryString(orderFile);
+            reader.readAsArrayBuffer(orderFile);
         });
 
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
