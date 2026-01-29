@@ -244,30 +244,36 @@ export default function ReporteRetailPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = e.target?.result;
-                    if (!data) {
+                    const fileContent = e.target?.result as string;
+                    if (!fileContent) {
                         return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
                     }
 
-                    const workbook = XLSX.read(data, { type: 'binary', cellHTML: true });
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(fileContent, "text/html");
                     
-                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                         return reject(new Error("No se encontraron hojas de cálculo en el archivo de orden después de procesarlo."));
+                    const tables = Array.from(doc.querySelectorAll("table"));
+                    if (tables.length === 0) {
+                        return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
                     }
+                    
+                    tables.sort((a, b) => b.rows.length - a.rows.length);
+                    const mainTable = tables[0];
 
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    const jsonDataAsArray = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
-
-                    if (!jsonDataAsArray || jsonDataAsArray.length === 0) {
-                         return reject(new Error("El archivo de orden parece estar vacío o no pudo ser leído correctamente."));
+                    const rows = Array.from(mainTable.querySelectorAll("tr"));
+                     if (rows.length === 0) {
+                        return reject(new Error("La tabla encontrada en el archivo de orden no tiene filas."));
                     }
+                    
+                    const dataAsArray = rows.map(row => 
+                        Array.from(row.querySelectorAll("td, th")).map(cell => cell.textContent?.trim() || "")
+                    );
                     
                     let headerRowIndex = -1;
                     let headers: string[] = [];
 
-                    for (let i = 0; i < jsonDataAsArray.length; i++) {
-                        const row = jsonDataAsArray[i] as any[];
+                    for (let i = 0; i < dataAsArray.length; i++) {
+                        const row = dataAsArray[i];
                         if (!Array.isArray(row)) continue;
                         
                         const hasEbeln = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN');
@@ -281,14 +287,14 @@ export default function ReporteRetailPage() {
                     }
                     
                     if (headerRowIndex === -1) {
-                         const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
+                         const rawDataSample = JSON.stringify(dataAsArray.slice(0, 10));
                          const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga las columnas 'EBELN' y 'BELNR'. Muestra de datos leídos: ${rawDataSample}`;
                          return reject(new Error(errorMessage));
                     }
 
                     const finalJsonData = [];
-                    for (let i = headerRowIndex + 1; i < jsonDataAsArray.length; i++) {
-                        const row = jsonDataAsArray[i] as any[];
+                    for (let i = headerRowIndex + 1; i < dataAsArray.length; i++) {
+                        const row = dataAsArray[i] as any[];
                         if (!Array.isArray(row) || row.every(cell => !cell)) continue;
 
                         const obj: { [key: string]: any } = {};
@@ -307,11 +313,11 @@ export default function ReporteRetailPage() {
                     resolve(finalJsonData);
 
                 } catch (err: any) {
-                    reject(new Error("Error al procesar el archivo de orden: " + err.message));
+                    reject(new Error("Error al procesar el archivo de orden como HTML: " + err.message));
                 }
             };
             reader.onerror = () => reject(new Error("No se pudo leer el archivo de orden."));
-            reader.readAsBinaryString(orderFile);
+            reader.readAsText(orderFile);
         });
 
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
