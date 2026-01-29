@@ -90,104 +90,74 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    // This helper normalizes PO numbers by converting to string, trimming, and removing leading zeros.
+    // This helper normalizes PO numbers.
     const normalizePO = (value: any): string => {
         if (value === undefined || value === null) return "";
-        // Convert to string, trim whitespace, and then remove leading zeros.
         return String(value).trim().replace(/^0+/, '');
     }
 
-    // Accessors for Order File
-    const getDocNoFromOrderFile = (item: any) => getValue(item, ['documento no.', 'belnr']);
-    const getPoFromOrderFile = (item: any) => getValue(item, ['orden de compra', 'ebeln']);
+    // Accessor functions for specific fields.
+    const getDocNo = (item: any) => getValue(item, ['documento no.', 'belnr']);
+    const getPoNo = (item: any) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
 
-    // Accessor for Data File
-    const getPoFromDataFile = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
-    
-    const orderFilePOs = new Set(orderData.map(item => normalizePO(getPoFromOrderFile(item))).filter(Boolean));
-    if (orderFilePOs.size === 0) {
-        toast({ title: "Error en Archivo de Orden", description: "No se encontraron valores válidos en la columna 'Orden de Compra' / 'ebeln'.", variant: "destructive" });
+    // Step 1: Process the main data file into a map for quick lookups.
+    // Group all items by their Purchase Order (PO) number.
+    const poToItemsMap = new Map<string, RetailData[]>();
+    for (const item of mainData) {
+        const po = getPoNo(item);
+        if (po === undefined || po === null) continue;
+
+        const poKey = normalizePO(po);
+        if (!poKey) continue;
+        
+        if (!poToItemsMap.has(poKey)) {
+            poToItemsMap.set(poKey, []);
+        }
+        poToItemsMap.get(poKey)!.push(item);
+    }
+
+    if (poToItemsMap.size === 0) {
+        toast({ title: "Error en Archivo de Datos", description: "No se encontraron órdenes de compra válidas en el archivo de datos.", variant: "destructive" });
         return null;
     }
 
-    const dataFilePOs = new Set(mainData.map(item => normalizePO(getPoFromDataFile(item))).filter(Boolean));
-    if (dataFilePOs.size === 0) {
-        toast({ title: "Error en Archivo de Datos", description: "No se encontraron valores válidos en la columna 'Ord. de Compra' / 'ebeln'.", variant: "destructive" });
-        return null;
-    }
-    
-    const commonPOs = new Set([...orderFilePOs].filter(po => dataFilePOs.has(po)));
-    if (commonPOs.size === 0) {
-        const orderPOExample = Array.from(orderFilePOs).slice(0, 5).join(', ');
-        const dataPOExample = Array.from(dataFilePOs).slice(0, 5).join(', ');
-        toast({
-            title: "No hay coincidencias de Órdenes de Compra",
-            description: `No se encontraron órdenes en común. Ejemplos del archivo de orden: [${orderPOExample}]. Ejemplos del archivo de datos: [${dataPOExample}].`,
-            variant: "destructive",
-            duration: 9000
-        });
-        return null;
-    }
+    // Step 2: Process the order file to define the structure and order of the final report.
+    // It creates an ordered map from Document Number to a set of PO numbers.
+    const docToPoMap = new Map<string, Set<string>>();
+    for (const item of orderData) {
+        const docNo = getDocNo(item);
+        const poNo = getPoNo(item);
 
-    // 1. Process Order File to get an ordered list of documents and a map from DocNo to POs
-    const docToPoMap = new Map<string, string[]>();
-    const orderedDocs: string[] = [];
-
-    orderData.forEach(item => {
-        const docNo = getDocNoFromOrderFile(item);
-        const poNo = getPoFromOrderFile(item);
-
-        if (docNo === undefined || poNo === undefined) return;
+        if (docNo === undefined || poNo === undefined) continue;
 
         const docKey = String(docNo).trim();
         const poKey = normalizePO(poNo);
         
-        if (!docKey || !poKey) return;
+        if (!docKey || !poKey) continue;
 
         if (!docToPoMap.has(docKey)) {
-            docToPoMap.set(docKey, []);
-            if (!orderedDocs.includes(docKey)) {
-                orderedDocs.push(docKey);
-            }
+            docToPoMap.set(docKey, new Set());
         }
-        
-        const poList = docToPoMap.get(docKey)!;
-        if (!poList.includes(poKey)) {
-          poList.push(poKey);
-        }
-    });
+        docToPoMap.get(docKey)!.add(poKey);
+    }
     
-    if (orderedDocs.length === 0) {
-        toast({ title: "Error en archivo de orden", description: "No se encontraron 'Documento no.' o 'Orden de compra' en el archivo de orden.", variant: "destructive" });
+    if (docToPoMap.size === 0) {
+        toast({ title: "Error en archivo de orden", description: "No se encontraron 'Documento no.' válidos en el archivo de orden.", variant: "destructive" });
         return null;
     }
-
-    // 2. Process Data File to group all items by Purchase Order
-    const poToItemsMap = mainData.reduce<{[key: string]: RetailData[]}>((acc, item) => {
-        const po = getPoFromDataFile(item);
-        if (po === undefined || po === null) return acc;
-
-        const poKey = normalizePO(po);
-        if (!poKey) return acc;
-        
-        if (!acc[poKey]) {
-            acc[poKey] = [];
-        }
-        acc[poKey].push(item);
-        return acc;
-    }, {});
-
-    // 3. Combine data based on the order and grouping defined by the order file
+    
+    // Step 3: Combine the data. Iterate through the ordered documents from the order file,
+    // look up the corresponding items from the main data map, and build the final structure.
     const finalGroupedData: GroupedData[] = [];
-
-    for (const docKey of orderedDocs) {
-        const poNumbers = docToPoMap.get(docKey) || [];
-        
-        let allItemsForDoc: RetailData[] = [];
-        poNumbers.forEach(poKey => {
-            const items = poToItemsMap[poKey] || [];
-            allItemsForDoc = allItemsForDoc.concat(items);
-        });
+    
+    for (const [docKey, poNumbers] of docToPoMap.entries()) {
+        const allItemsForDoc: RetailData[] = [];
+        for (const poKey of poNumbers) {
+            const items = poToItemsMap.get(poKey);
+            if (items) {
+                allItemsForDoc.push(...items);
+            }
+        }
 
         if (allItemsForDoc.length > 0) {
             const totalCantidad = allItemsForDoc.reduce((sum, item) => sum + getQuantity(item), 0);
@@ -204,8 +174,8 @@ export default function ReporteRetailPage() {
 
     if (finalGroupedData.length === 0) {
       toast({
-        title: "No se generaron grupos",
-        description: `Aunque se encontraron órdenes de compra en común (${commonPOs.size}), no se pudo formar ningún grupo de reporte. Revisa la estructura de los archivos.`,
+        title: "No hay coincidencias",
+        description: "No se encontraron datos en el archivo principal que correspondieran con las órdenes del archivo de orden.",
         variant: "destructive",
         duration: 9000
       });
