@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -238,42 +237,10 @@ export default function ReporteRetailPage() {
                         if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                         const worksheet = workbook.Sheets[sheetName];
                         
-                        const dataAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
-                        
-                        if (!dataAsArray || dataAsArray.length < 1) {
-                             return reject(new Error(`El archivo ${file.name} parece estar vacío o no tiene datos.`));
-                        }
-
-                        let headerRowIndex = -1;
-                        let headers: string[] = [];
-                        for(let i = 0; i < dataAsArray.length; i++) {
-                            const row = dataAsArray[i];
-                            if (!Array.isArray(row) || row.length === 0) continue;
-                            const rowAsString = row.join(" ").toLowerCase();
-                            // Heuristic to find the header row
-                            if (rowAsString.includes("material") || (rowAsString.includes("orden") && rowAsString.includes("compra")) || rowAsString.includes('ebeln') || rowAsString.includes('belnr')) {
-                                headerRowIndex = i;
-                                headers = row.map(h => String(h || '').trim());
-                                break;
-                            }
-                        }
-
-                        if (headerRowIndex === -1) {
-                            return reject(new Error(`No se pudo encontrar una fila de encabezado reconocible en ${file.name}. Revise que las columnas existan.`));
-                        }
-                        
-                        const jsonData = dataAsArray.slice(headerRowIndex + 1).map(row => {
-                            const obj: {[key: string]: any} = {};
-                            headers.forEach((header, index) => {
-                                if (header) { 
-                                    obj[header] = row[index];
-                                }
-                            });
-                            return obj;
-                        }).filter(obj => Object.values(obj).some(val => val !== null && val !== undefined && val !== ''));
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                         if (jsonData.length === 0) {
-                            return reject(new Error(`No se encontraron filas de datos debajo del encabezado en ${file.name}.`));
+                            return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
                         }
 
                         resolve(jsonData);
