@@ -101,74 +101,60 @@ const readOrderFileAsHTML = (file: File): Promise<any[]> => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                let htmlContent = e.target?.result as string;
-                if (!htmlContent) {
+                const htmlString = e.target?.result as string;
+                if (!htmlString) {
                     return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
                 }
 
-                // Clean content: remove XML declarations which can confuse the parser.
-                htmlContent = htmlContent.replace(/<\?xml[^>]*\?>/i, '').trim();
+                // Use XLSX to parse the HTML string
+                const workbook = XLSX.read(htmlString, { type: 'string' });
                 
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlContent, "text/html");
-
-                // Check for parser errors, which can happen with malformed content
-                if (doc.getElementsByTagName("parsererror").length > 0) {
-                     const errorContent = doc.getElementsByTagName("parsererror")[0].textContent;
-                     return reject(new Error(`Error al analizar el archivo de orden. Contenido del error: ${errorContent}`));
+                const sheetName = workbook.SheetNames[0];
+                if (!sheetName) {
+                    return reject(new Error("XLSX no pudo encontrar una tabla procesable en el archivo de orden (HTML)."));
                 }
+                const worksheet = workbook.Sheets[sheetName];
 
-                const tables = Array.from(doc.querySelectorAll("table"));
-                if (tables.length === 0) {
-                    return reject(new Error("No se encontró ninguna tabla en el archivo de orden. Esto puede ocurrir por problemas de codificación o un formato de archivo no estándar."));
+                // Convert to array of arrays to find header
+                const jsonDataAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+                if (jsonDataAsArray.length === 0) {
+                    return reject(new Error(`XLSX no extrajo filas de la tabla HTML en ${file.name}.`));
                 }
-                
-                tables.sort((a, b) => b.rows.length - a.rows.length);
-                const mainTable = tables[0];
-
-                const jsonData: any[] = [];
-                const rows = Array.from(mainTable.rows);
 
                 let headerRowIndex = -1;
-                let headerMap: { [key: string]: number } = {};
-                for(let i = 0; i < rows.length; i++) {
-                    const cells = Array.from(rows[i].cells).map(cell => cell.textContent?.toUpperCase().trim() || "");
-                    const ebelnIndex = cells.findIndex(c => c.includes("EBELN"));
-                    const belnrIndex = cells.findIndex(c => c.includes("BELNR"));
-                    if (ebelnIndex !== -1 && belnrIndex !== -1) {
+                for (let i = 0; i < jsonDataAsArray.length; i++) {
+                    const row = jsonDataAsArray[i];
+                    if (!Array.isArray(row)) continue;
+                    const rowString = row.join(' ').toUpperCase();
+                    const hasEbeln = rowString.includes("EBELN");
+                    const hasBelnr = rowString.includes("BELNR");
+                    if (hasEbeln && hasBelnr) {
                         headerRowIndex = i;
-                        headerMap['Ord. de compra'] = ebelnIndex;
-                        headerMap['Documento no.'] = belnrIndex;
                         break;
                     }
                 }
 
                 if (headerRowIndex === -1) {
-                    const rawDataSample = rows.slice(0, 10).map(row => Array.from(row.cells).map(cell => cell.textContent?.trim()));
-                    return reject(new Error(`No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden. Muestra de datos: ${JSON.stringify(rawDataSample)}`));
+                    const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
+                    return reject(new Error(`No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden. Muestra de datos: ${rawDataSample}`));
                 }
 
-                for (let i = headerRowIndex + 1; i < rows.length; i++) {
-                    const cells = Array.from(rows[i].cells);
-                    const ebeln = cells[headerMap['Ord. de compra']]?.textContent?.trim() || "";
-                    const belnr = cells[headerMap['Documento no.']]?.textContent?.trim() || "";
-                    if (ebeln || belnr) {
-                         jsonData.push({ 'Ord. de compra': ebeln, 'Documento no.': belnr });
-                    }
+                // Now convert to JSON objects using the found header row
+                const finalJsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
+
+                if (finalJsonData.length === 0) {
+                     return reject(new Error("No se extrajeron datos de la tabla en el archivo de orden, incluso después de encontrar los encabezados."));
                 }
 
-                if (jsonData.length === 0) {
-                     return reject(new Error("No se extrajeron datos de las columnas 'EBELN' y 'BELNR' del archivo de orden."));
-                }
-
-                resolve(jsonData);
+                resolve(finalJsonData);
 
             } catch (err: any) {
-                reject(new Error(`Error al procesar el archivo HTML de orden ${file.name}: ${err.message}`));
+                reject(new Error(`Error al procesar el archivo HTML de orden ${file.name} con XLSX: ${err.message}`));
             }
         };
         reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
-        reader.readAsText(file, 'ISO-8859-1');
+        reader.readAsText(file, 'ISO-8859-1'); // Reading as text with correct encoding
     });
 };
 
