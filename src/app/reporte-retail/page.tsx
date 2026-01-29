@@ -159,7 +159,7 @@ const readOrderFileAsHTML = (file: File): Promise<any[]> => {
             }
         };
         reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
-        reader.readAsText(file);
+        reader.readAsText(file, 'ISO-8859-1');
     });
 };
 
@@ -599,5 +599,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
