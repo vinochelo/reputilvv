@@ -245,36 +245,33 @@ export default function ReporteRetailPage() {
             reader.onload = (e) => {
                 try {
                     const htmlString = e.target?.result as string;
-                    if (!htmlString) {
-                         return reject(new Error("No se pudo leer el contenido del archivo de orden."));
+                    if (!htmlString || htmlString.trim() === '') {
+                        return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
                     }
 
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlString, "text/html");
+                    // Use xlsx to parse the HTML string
+                    const workbook = XLSX.read(htmlString, { type: 'string' });
                     
-                    const tables = doc.querySelectorAll("table");
-                    if (tables.length === 0) {
-                        return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
-                    }
-                    
-                    let mainTable = tables[0];
-                    if (tables.length > 1) {
-                        mainTable = Array.from(tables).reduce((p, c) => c.rows.length > p.rows.length ? c : p, tables[0]);
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                         return reject(new Error("No se encontraron hojas de cálculo en el archivo de orden después de procesarlo como HTML."));
                     }
 
-                    const dataRows = Array.from(mainTable.rows).map(row => 
-                        Array.from(row.cells).map(cell => cell.textContent?.trim() ?? '')
-                    );
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    // Read as array of arrays to manually find the header
+                    const jsonDataAsArray = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
 
-                    if (dataRows.length === 0) {
-                        return reject(new Error("La tabla encontrada en el archivo de orden está vacía."));
+                    if (!jsonDataAsArray || jsonDataAsArray.length === 0) {
+                         return reject(new Error("El archivo de orden parece estar vacío o no pudo ser leído correctamente."));
                     }
                     
                     let headerRowIndex = -1;
                     let headers: string[] = [];
 
-                    for (let i = 0; i < dataRows.length; i++) {
-                        const row = dataRows[i];
+                    for (let i = 0; i < jsonDataAsArray.length; i++) {
+                        const row = jsonDataAsArray[i] as any[];
+                        if (!Array.isArray(row)) continue;
+                        
                         const hasEbeln = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'EBELN');
                         const hasBelnr = row.some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'BELNR');
                         
@@ -284,17 +281,17 @@ export default function ReporteRetailPage() {
                             break;
                         }
                     }
-
+                    
                     if (headerRowIndex === -1) {
-                         const rawDataSample = JSON.stringify(dataRows.slice(0, 5));
+                         const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
                          const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga las columnas 'EBELN' y 'BELNR'. Muestra de datos leídos: ${rawDataSample}`;
                          return reject(new Error(errorMessage));
                     }
 
-                    const jsonData = [];
-                    for (let i = headerRowIndex + 1; i < dataRows.length; i++) {
-                        const row = dataRows[i];
-                        if (row.every(cell => !cell)) continue;
+                    const finalJsonData = [];
+                    for (let i = headerRowIndex + 1; i < jsonDataAsArray.length; i++) {
+                        const row = jsonDataAsArray[i] as any[];
+                        if (!Array.isArray(row) || row.every(cell => !cell)) continue;
 
                         const obj: { [key: string]: any } = {};
                         headers.forEach((header, index) => {
@@ -302,16 +299,17 @@ export default function ReporteRetailPage() {
                                 obj[header] = row[index];
                             }
                         });
-                        jsonData.push(obj);
+                        finalJsonData.push(obj);
                     }
 
-                    if (jsonData.length === 0) {
+                    if (finalJsonData.length === 0) {
                         return reject(new Error("El archivo de orden no contiene filas de datos después de la fila de encabezado."));
                     }
                     
-                    resolve(jsonData);
+                    resolve(finalJsonData);
+
                 } catch (err: any) {
-                    reject(new Error("Error al procesar el archivo de orden como HTML: " + err.message));
+                    reject(new Error("Error al procesar el archivo de orden: " + err.message));
                 }
             };
             reader.onerror = () => reject(new Error("No se pudo leer el archivo de orden."));
@@ -606,7 +604,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
-
-    
