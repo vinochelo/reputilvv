@@ -57,13 +57,36 @@ const readMainDataFile = (file: File): Promise<any[]> => {
                 if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                 const worksheet = workbook.Sheets[sheetName];
                 
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: 3 });
+                // Find headers dynamically instead of assuming a fixed range.
+                const jsonDataRaw: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
-                if (jsonData.length === 0) {
-                    return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que los datos comiencen en la fila 4.`));
+                if (jsonDataRaw.length === 0) {
+                     return reject(new Error(`No se encontraron filas de datos en ${file.name}.`));
                 }
 
-                resolve(jsonData);
+                let headerRowIndex = -1;
+                const headerKeys = ['material', 'ord. de compra', 'ebeln', 'proveedor', 'lifnr'];
+
+                for (let i = 0; i < jsonDataRaw.length; i++) {
+                    const row = jsonDataRaw[i];
+                    const rowString = row.join(' ').toLowerCase();
+                    if (headerKeys.some(key => rowString.includes(key))) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    return reject(new Error(`No se pudo encontrar la fila de encabezado en el archivo de datos ${file.name}.`));
+                }
+                
+                const finalJsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
+                
+                if (finalJsonData.length === 0) {
+                    return reject(new Error(`No se encontraron datos debajo de la fila de encabezado en ${file.name}.`));
+                }
+
+                resolve(finalJsonData);
             } catch (err: any) {
                 reject(new Error(`Error al procesar el archivo de datos ${file.name}: ${err.message}`));
             }
@@ -78,29 +101,29 @@ const readOrderFileAsHTML = (file: File): Promise<any[]> => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const data = e.target?.result;
-                if (!data) {
+                const htmlContent = e.target?.result as string;
+                if (!htmlContent) {
                     return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
                 }
 
-                const workbook = XLSX.read(data, { type: 'binary' });
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlContent, "text/html");
 
-                const sheetName = workbook.SheetNames[0];
-                if (!sheetName) {
-                    return reject(new Error(`No se encontraron hojas en el archivo de orden ${file.name}.`));
-                }
-                const worksheet = workbook.Sheets[sheetName];
-                
-                const jsonDataAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-
-                if (jsonDataAsArray.length === 0) {
-                     return reject(new Error("No se extrajeron datos del archivo de orden."));
+                const tables = Array.from(doc.querySelectorAll("table"));
+                if (tables.length === 0) {
+                    return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
                 }
                 
+                tables.sort((a, b) => b.rows.length - a.rows.length);
+                const mainTable = tables[0];
+
+                const jsonData: any[] = [];
+                const rows = Array.from(mainTable.rows);
+
                 let headerRowIndex = -1;
                 let headerMap: { [key: string]: number } = {};
-                for (let i = 0; i < jsonDataAsArray.length; i++) {
-                    const cells = jsonDataAsArray[i].map(c => String(c).toUpperCase().trim());
+                for(let i = 0; i < rows.length; i++) {
+                    const cells = Array.from(rows[i].cells).map(cell => cell.textContent?.toUpperCase().trim() || "");
                     const ebelnIndex = cells.findIndex(c => c.includes("EBELN"));
                     const belnrIndex = cells.findIndex(c => c.includes("BELNR"));
                     if (ebelnIndex !== -1 && belnrIndex !== -1) {
@@ -112,33 +135,31 @@ const readOrderFileAsHTML = (file: File): Promise<any[]> => {
                 }
 
                 if (headerRowIndex === -1) {
-                    const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
-                    return reject(new Error(`No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden. Muestra de datos: ${rawDataSample}`));
+                    const rawDataSample = rows.slice(0, 10).map(row => Array.from(row.cells).map(cell => cell.textContent?.trim()));
+                    return reject(new Error(`No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden. Muestra de datos: ${JSON.stringify(rawDataSample)}`));
                 }
 
-                const dataRows = jsonDataAsArray.slice(headerRowIndex + 1);
-                const jsonData = dataRows.map(rowCells => {
-                    const ebeln = rowCells[headerMap['Ord. de compra']] || "";
-                    const belnr = rowCells[headerMap['Documento no.']] || "";
+                for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                    const cells = Array.from(rows[i].cells);
+                    const ebeln = cells[headerMap['Ord. de compra']]?.textContent?.trim() || "";
+                    const belnr = cells[headerMap['Documento no.']]?.textContent?.trim() || "";
                     if (ebeln || belnr) {
-                        return { 'Ord. de compra': ebeln, 'Documento no.': belnr };
+                         jsonData.push({ 'Ord. de compra': ebeln, 'Documento no.': belnr });
                     }
-                    return null;
-                }).filter(item => item !== null);
-
+                }
 
                 if (jsonData.length === 0) {
                      return reject(new Error("No se extrajeron datos de las columnas 'EBELN' y 'BELNR' del archivo de orden."));
                 }
 
-                resolve(jsonData as any[]);
+                resolve(jsonData);
 
             } catch (err: any) {
                 reject(new Error(`Error al procesar el archivo HTML de orden ${file.name}: ${err.message}`));
             }
         };
         reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
-        reader.readAsBinaryString(file);
+        reader.readAsText(file);
     });
 };
 
@@ -578,3 +599,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
