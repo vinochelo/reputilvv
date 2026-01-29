@@ -80,6 +80,10 @@ export default function ReporteRetailPage() {
   const handleOrderFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
+        toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
+        return;
+      }
       setOrderFile(file);
     }
   };
@@ -221,104 +225,35 @@ export default function ReporteRetailPage() {
     setStatus('parsing');
     
     try {
-        const readDataFile = (file: File): Promise<RetailData[]> => {
+        const readExcelFile = (file: File): Promise<any[]> => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const data = e.target?.result;
-                        if (!data) return reject(new Error(`El archivo de datos ${file.name} está vacío.`));
+                        if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
                         const workbook = XLSX.read(data, { type: 'array' });
                         const sheetName = workbook.SheetNames[0];
                         if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                         const worksheet = workbook.Sheets[sheetName];
-                        resolve(XLSX.utils.sheet_to_json<RetailData>(worksheet));
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                        if (!jsonData || jsonData.length === 0) {
+                            return reject(new Error(`El archivo ${file.name} parece estar vacío o no pudo ser leído.`));
+                        }
+                        resolve(jsonData);
                     } catch (err: any) {
-                        reject(new Error(`Error al procesar el archivo de datos ${file.name}: ${err.message}`));
+                        reject(new Error(`Error al procesar ${file.name}: ${err.message}`));
                     }
                 };
-                reader.onerror = () => reject(new Error(`Error al leer el archivo de datos ${file.name}.`));
+                reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
                 reader.readAsArrayBuffer(file);
-            });
-        };
-
-        const readOrderFileAsHtml = (file: File): Promise<any[]> => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const textContent = e.target?.result as string;
-                        if (!textContent) return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
-
-                        const doc = new DOMParser().parseFromString(textContent, 'text/html');
-                        const tables = Array.from(doc.querySelectorAll("table"));
-                        
-                        if (tables.length === 0) {
-                            return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
-                        }
-                        
-                        tables.sort((a, b) => b.rows.length - a.rows.length);
-                        const mainTable = tables[0];
-
-                        const worksheet = XLSX.utils.table_to_sheet(mainTable);
-                        if (!worksheet) {
-                            return reject(new Error("La librería de Excel no pudo convertir la tabla HTML encontrada."));
-                        }
-                        const jsonDataAsArray = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
-
-                        if (!jsonDataAsArray || jsonDataAsArray.length === 0) {
-                            return reject(new Error("La tabla encontrada en el archivo de orden está vacía."));
-                        }
-
-                        let headerRowIndex = -1;
-                        let headers: string[] = [];
-                        for (let i = 0; i < jsonDataAsArray.length; i++) {
-                            const row = jsonDataAsArray[i];
-                            if (!Array.isArray(row)) continue;
-                            const upperCaseRow = row.map(cell => String(cell || '').trim().toUpperCase());
-                            if (upperCaseRow.includes('EBELN') && upperCaseRow.includes('BELNR')) {
-                                headerRowIndex = i;
-                                headers = row.map(cell => String(cell || '').trim());
-                                break;
-                            }
-                        }
-
-                        if (headerRowIndex === -1) {
-                            const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
-                            const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga las columnas 'EBELN' y 'BELNR'. Muestra de datos leídos: ${rawDataSample}`;
-                            return reject(new Error(errorMessage));
-                        }
-
-                        const finalJsonData = [];
-                        for (let i = headerRowIndex + 1; i < jsonDataAsArray.length; i++) {
-                            const row = jsonDataAsArray[i] as any[];
-                            if (!Array.isArray(row) || row.every(cell => !cell)) continue;
-                            const obj: { [key: string]: any } = {};
-                            headers.forEach((header, index) => {
-                                if (header && index < row.length) {
-                                    obj[header] = row[index];
-                                }
-                            });
-                            finalJsonData.push(obj);
-                        }
-
-                        if (finalJsonData.length === 0) {
-                            return reject(new Error("El archivo de orden no contiene filas de datos válidas."));
-                        }
-                        resolve(finalJsonData);
-
-                    } catch (err: any) {
-                        reject(new Error(`Error al procesar el archivo de orden ${file.name}: ${err.message}`));
-                    }
-                };
-                reader.onerror = () => reject(new Error(`Error al leer el archivo de orden ${file.name}.`));
-                reader.readAsText(file);
             });
         };
         
         const [mainData, orderData] = await Promise.all([
-            readDataFile(dataFile),
-            readOrderFileAsHtml(orderFile)
+            readExcelFile(dataFile),
+            readExcelFile(orderFile)
         ]);
 
         const groupedAndSortedData = processData(mainData, orderData);
@@ -492,7 +427,7 @@ export default function ReporteRetailPage() {
                       <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
                           <UploadCloud className="w-12 h-12 text-primary/70" />
                           <p className="font-semibold mt-2">2. Archivo de Orden</p>
-                          <p className="text-xs text-muted-foreground">Excel que define el orden (HTML/.xls).</p>
+                          <p className="text-xs text-muted-foreground">Excel que define el orden.</p>
                           <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
                               Seleccionar Archivo
                           </Button>
@@ -506,7 +441,7 @@ export default function ReporteRetailPage() {
                   </Button>
 
                   <input ref={dataFileInputRef} type="file" className="hidden" onChange={handleDataFileChange} accept=".xlsx, .xls" />
-                  <input ref={orderFileInputRef} type="file" className="hidden" onChange={handleOrderFileChange} accept=".xlsx, .xls, .html" />
+                  <input ref={orderFileInputRef} type="file" className="hidden" onChange={handleOrderFileChange} accept=".xlsx, .xls" />
               </div>
             );
     }
