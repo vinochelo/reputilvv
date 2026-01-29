@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -103,13 +104,13 @@ export default function ReporteRetailPage() {
     // --- Start of new diagnostic logic ---
     const orderFilePOs = new Set(orderData.map(item => normalizePO(getPoFromOrderFile(item))).filter(Boolean));
     if (orderFilePOs.size === 0) {
-        toast({ title: "Error en Archivo de Orden", description: "No se encontraron valores válidos en la columna 'Orden de Compra' / 'EBELN'.", variant: "destructive" });
+        toast({ title: "Error en Archivo de Orden", description: "No se encontraron valores válidos en la columna 'Orden de Compra' / 'ebeln'.", variant: "destructive" });
         return null;
     }
 
     const dataFilePOs = new Set(mainData.map(item => normalizePO(getPoFromDataFile(item))).filter(Boolean));
     if (dataFilePOs.size === 0) {
-        toast({ title: "Error en Archivo de Datos", description: "No se encontraron valores válidos en la columna 'Ord. de Compra' / 'EBELN'.", variant: "destructive" });
+        toast({ title: "Error en Archivo de Datos", description: "No se encontraron valores válidos en la columna 'Ord. de Compra' / 'ebeln'.", variant: "destructive" });
         return null;
     }
     
@@ -253,6 +254,8 @@ export default function ReporteRetailPage() {
                     if (!dataRows || dataRows.length === 0) {
                         return reject(new Error("El archivo de orden está vacío o no se pudo leer."));
                     }
+                    
+                    const rawDataSample = JSON.stringify(dataRows.slice(0, 10));
 
                     let headerRowIndex = -1;
                     let headers: string[] = [];
@@ -273,7 +276,8 @@ export default function ReporteRetailPage() {
                     }
 
                     if (headerRowIndex === -1) {
-                         return reject(new Error("No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga columnas para 'documento' y 'orden'."));
+                         const errorMessage = `No se pudo encontrar la fila de encabezado en el archivo de orden. Asegúrate de que contenga columnas para 'documento' y 'orden'. Muestra de datos leídos: ${rawDataSample}`;
+                         return reject(new Error(errorMessage));
                     }
 
                     const jsonData = [];
@@ -291,7 +295,8 @@ export default function ReporteRetailPage() {
                     }
 
                     if (jsonData.length === 0) {
-                         return reject(new Error("El archivo de orden parece estar vacío o no pudo ser leído correctamente."));
+                        const errorMessage = `El archivo de orden no contiene filas de datos después de la fila de encabezado. Muestra de datos leídos: ${rawDataSample}`;
+                        return reject(new Error(errorMessage));
                     }
                     
                     resolve(jsonData);
@@ -327,6 +332,7 @@ export default function ReporteRetailPage() {
             title: "Error al procesar archivos",
             description: error.message || "Asegúrate de que los formatos sean correctos.",
             variant: "destructive",
+            duration: 9000,
         });
         setStatus('error');
     }
