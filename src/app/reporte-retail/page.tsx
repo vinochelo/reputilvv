@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -236,11 +237,45 @@ export default function ReporteRetailPage() {
                         const sheetName = workbook.SheetNames[0];
                         if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                         const worksheet = workbook.Sheets[sheetName];
-                        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-                        if (!jsonData || jsonData.length === 0) {
-                            return reject(new Error(`El archivo ${file.name} parece estar vacío o no pudo ser leído.`));
+                        
+                        const dataAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
+                        
+                        if (!dataAsArray || dataAsArray.length < 1) {
+                             return reject(new Error(`El archivo ${file.name} parece estar vacío o no tiene datos.`));
                         }
+
+                        let headerRowIndex = -1;
+                        let headers: string[] = [];
+                        for(let i = 0; i < dataAsArray.length; i++) {
+                            const row = dataAsArray[i];
+                            if (!Array.isArray(row) || row.length === 0) continue;
+                            const rowAsString = row.join(" ").toLowerCase();
+                            // Heuristic to find the header row
+                            if (rowAsString.includes("material") || (rowAsString.includes("orden") && rowAsString.includes("compra")) || rowAsString.includes('ebeln') || rowAsString.includes('belnr')) {
+                                headerRowIndex = i;
+                                headers = row.map(h => String(h || '').trim());
+                                break;
+                            }
+                        }
+
+                        if (headerRowIndex === -1) {
+                            return reject(new Error(`No se pudo encontrar una fila de encabezado reconocible en ${file.name}. Revise que las columnas existan.`));
+                        }
+                        
+                        const jsonData = dataAsArray.slice(headerRowIndex + 1).map(row => {
+                            const obj: {[key: string]: any} = {};
+                            headers.forEach((header, index) => {
+                                if (header) { 
+                                    obj[header] = row[index];
+                                }
+                            });
+                            return obj;
+                        }).filter(obj => Object.values(obj).some(val => val !== null && val !== undefined && val !== ''));
+
+                        if (jsonData.length === 0) {
+                            return reject(new Error(`No se encontraron filas de datos debajo del encabezado en ${file.name}.`));
+                        }
+
                         resolve(jsonData);
                     } catch (err: any) {
                         reject(new Error(`Error al procesar ${file.name}: ${err.message}`));
@@ -496,10 +531,17 @@ export default function ReporteRetailPage() {
                       const dateValue = getPostingDate(item);
                       if (dateValue) {
                         try {
-                           const date = new Date(dateValue);
-                           if (!Number.isNaN(date.getTime())) {
-                             const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
-                             formattedDate = `${String(adjustedDate.getDate()).padStart(2, '0')}.${String(adjustedDate.getMonth() + 1).padStart(2, '0')}.${adjustedDate.getFullYear()}`;
+                           // Handle Excel's numeric date format
+                           if (typeof dateValue === 'number' && dateValue > 1) {
+                                const excelEpoch = new Date(1899, 11, 30);
+                                const date = new Date(excelEpoch.getTime() + dateValue * 24 * 60 * 60 * 1000);
+                                formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+                           } else { // Handle string dates
+                                const date = new Date(dateValue);
+                                if (!Number.isNaN(date.getTime())) {
+                                    const adjustedDate = new Date(date.valueOf() + date.getTimezoneOffset() * 60 * 1000);
+                                    formattedDate = `${String(adjustedDate.getDate()).padStart(2, '0')}.${String(adjustedDate.getMonth() + 1).padStart(2, '0')}.${adjustedDate.getFullYear()}`;
+                                }
                            }
                         } catch(e) { /* Ignore date parsing errors */ }
                       }
@@ -536,3 +578,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
