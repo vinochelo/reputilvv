@@ -90,12 +90,10 @@ export default function ReporteRetailPage() {
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    // This new helper normalizes keys by trimming and removing leading zeros.
+    // This helper normalizes PO numbers by converting to string and trimming whitespace.
     const normalizePO = (value: any): string => {
         if (value === undefined || value === null) return "";
-        // Remove leading zeros only if the value is purely numeric
-        const stringValue = String(value).trim();
-        return stringValue.match(/^[0-9]+$/) ? stringValue.replace(/^0+/, '') : stringValue;
+        return String(value).trim();
     }
 
     // Accessors for Order File
@@ -104,6 +102,33 @@ export default function ReporteRetailPage() {
 
     // Accessor for Data File
     const getPoFromDataFile = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
+
+    // --- Start of new diagnostic logic ---
+    const orderFilePOs = new Set(orderData.map(item => normalizePO(getPoFromOrderFile(item))).filter(Boolean));
+    if (orderFilePOs.size === 0) {
+        toast({ title: "Error en Archivo de Orden", description: "No se encontraron valores válidos en la columna 'Orden de Compra' / 'EBELN'.", variant: "destructive" });
+        return null;
+    }
+
+    const dataFilePOs = new Set(mainData.map(item => normalizePO(getPoFromDataFile(item))).filter(Boolean));
+    if (dataFilePOs.size === 0) {
+        toast({ title: "Error en Archivo de Datos", description: "No se encontraron valores válidos en la columna 'Ord. de Compra' / 'EBELN'.", variant: "destructive" });
+        return null;
+    }
+    
+    const commonPOs = new Set([...orderFilePOs].filter(po => dataFilePOs.has(po)));
+    if (commonPOs.size === 0) {
+        const orderPOExample = Array.from(orderFilePOs).slice(0, 5).join(', ');
+        const dataPOExample = Array.from(dataFilePOs).slice(0, 5).join(', ');
+        toast({
+            title: "No hay coincidencias de Órdenes de Compra",
+            description: `No se encontraron órdenes en común. Ejemplos del archivo de orden: [${orderPOExample}]. Ejemplos del archivo de datos: [${dataPOExample}].`,
+            variant: "destructive",
+            duration: 9000
+        });
+        return null;
+    }
+    // --- End of new diagnostic logic ---
 
     // 1. Process Order File to get an ordered list of documents and a map from DocNo to POs
     const docToPoMap = new Map<string, string[]>();
@@ -161,7 +186,6 @@ export default function ReporteRetailPage() {
         
         let allItemsForDoc: RetailData[] = [];
         poNumbers.forEach(poKey => {
-            // poKey is already normalized here
             const items = poToItemsMap[poKey] || [];
             allItemsForDoc = allItemsForDoc.concat(items);
         });
@@ -171,7 +195,7 @@ export default function ReporteRetailPage() {
             const totalImporte = allItemsForDoc.reduce((sum, item) => sum + getAmount(item), 0);
 
             finalGroupedData.push({
-                n_doc: docKey, // This is now the Document Number (BELNR)
+                n_doc: docKey,
                 items: allItemsForDoc,
                 totalCantidad: totalCantidad,
                 totalImporte: totalImporte,
@@ -181,9 +205,10 @@ export default function ReporteRetailPage() {
 
     if (finalGroupedData.length === 0) {
       toast({
-        title: "No hay coincidencias",
-        description: "Ninguna orden de compra en el archivo de datos coincide con las del archivo de orden. Revisa que los números de 'orden de compra' sean los mismos en ambos archivos.",
+        title: "No se generaron grupos",
+        description: `Aunque se encontraron órdenes de compra en común (${commonPOs.size}), no se pudo formar ningún grupo de reporte. Revisa la estructura de los archivos.`,
         variant: "destructive",
+        duration: 9000
       });
       return null;
     }
@@ -257,8 +282,9 @@ export default function ReporteRetailPage() {
         if (groupedAndSortedData && groupedAndSortedData.length > 0) {
             setProcessedData(groupedAndSortedData);
         } else {
-            if (status !== 'error') {
-                setStatus('error');
+            // Check if status is not already 'error' to prevent multiple toasts
+            if (status !== 'error' && groupedAndSortedData === null) {
+              setStatus('error');
             }
         }
 
