@@ -70,8 +70,8 @@ export default function ReporteRetailPage() {
   const handleDataFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
-        toast({ title: "Error de archivo", description: "Sube un archivo Excel.", variant: "destructive" });
+      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
+        toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
         return;
       }
       setDataFile(file);
@@ -81,19 +81,20 @@ export default function ReporteRetailPage() {
   const handleOrderFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-        if (!['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'].includes(file.type)) {
-            toast({ title: "Error de archivo", description: "Sube un archivo Excel.", variant: "destructive" });
-            return;
-        }
-        setOrderFile(file);
+      if (!file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
+          toast({ title: "Error de archivo", description: "Sube un archivo Excel (.xls o .xlsx).", variant: "destructive" });
+          return;
+      }
+      setOrderFile(file);
     }
   };
 
   const processData = (mainData: RetailData[], orderData: any[]): GroupedData[] | null => {
-    // This helper normalizes PO numbers by converting to string and trimming whitespace.
+    // This helper normalizes PO numbers by converting to string, trimming, and removing leading zeros.
     const normalizePO = (value: any): string => {
         if (value === undefined || value === null) return "";
-        return String(value).trim();
+        // Convert to string, trim whitespace, and then remove leading zeros.
+        return String(value).trim().replace(/^0+/, '');
     }
 
     // Accessors for Order File
@@ -102,7 +103,7 @@ export default function ReporteRetailPage() {
 
     // Accessor for Data File
     const getPoFromDataFile = (item: RetailData) => getValue(item, ['ord. de compra', 'ebeln', 'orden de compra']);
-
+    
     // --- Start of new diagnostic logic ---
     const orderFilePOs = new Set(orderData.map(item => normalizePO(getPoFromOrderFile(item))).filter(Boolean));
     if (orderFilePOs.size === 0) {
@@ -143,7 +144,7 @@ export default function ReporteRetailPage() {
         const docKey = String(docNo).trim();
         const poKey = normalizePO(poNo);
         
-        if (!poKey) return;
+        if (!docKey || !poKey) return;
 
         if (!docToPoMap.has(docKey)) {
             docToPoMap.set(docKey, []);
@@ -218,7 +219,7 @@ export default function ReporteRetailPage() {
 
   const handleGenerateReport = async () => {
     if (!dataFile || !orderFile) {
-        toast({ title: "Faltan archivos", description: "Por favor, selecciona ambos archivos de Excel.", variant: "destructive" });
+        toast({ title: "Faltan archivos", description: "Por favor, selecciona ambos archivos Excel.", variant: "destructive" });
         return;
     }
 
@@ -246,44 +247,72 @@ export default function ReporteRetailPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = e.target?.result;
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[sheetName];
-                    
-                    const aoa: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false });
-                    
-                    let headerRowIndex = -1;
-                    for (let i = 0; i < Math.min(aoa.length, 10); i++) {
-                        const row = aoa[i] || [];
-                        if (row.some(cell => typeof cell === 'string' && (cell.trim().toUpperCase() === 'EBELN' || cell.trim().toUpperCase() === 'ORDEN DE COMPRA' || cell.trim().toUpperCase() === 'DOCUMENTO NO.'))) {
-                            headerRowIndex = i;
+                    const htmlString = e.target?.result as string;
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlString, "text/html");
+                    const table = doc.querySelector("table");
+
+                    if (!table) {
+                        return reject(new Error("No se encontró una tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
+                    }
+
+                    const rows = Array.from(table.querySelectorAll("tr"));
+                    if (rows.length === 0) {
+                        return reject(new Error("La tabla en el archivo de orden está vacía."));
+                    }
+
+                    let headerIndex = -1;
+                    let headers: string[] = [];
+
+                    for (let i = 0; i < Math.min(rows.length, 20); i++) {
+                        const potentialHeaders = Array.from(rows[i].querySelectorAll("th, td")).map(cell => cell.textContent?.trim().toLowerCase() || "");
+                        if (potentialHeaders.some(h => ['ebeln', 'orden de compra', 'belnr', 'documento no.'].includes(h))) {
+                            headerIndex = i;
+                            headers = Array.from(rows[i].querySelectorAll("th, td")).map(cell => cell.textContent?.trim() || "");
                             break;
                         }
                     }
-
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-                        range: headerRowIndex !== -1 ? headerRowIndex : 0,
-                    });
                     
+                    if (headerIndex === -1) {
+                        return reject(new Error("No se pudo encontrar la fila de encabezado (con EBELN o BELNR) en el archivo de orden."));
+                    }
+
+                    const dataRows = rows.slice(headerIndex + 1);
+                    const jsonData = dataRows.map(row => {
+                        const cells = Array.from(row.querySelectorAll("td"));
+                        const rowData: { [key: string]: any } = {};
+                        headers.forEach((header, index) => {
+                            if (header && cells[index]) {
+                                rowData[header] = cells[index].textContent?.trim() || "";
+                            }
+                        });
+                        return rowData;
+                    }).filter(obj => Object.values(obj).some(val => val && String(val).trim() !== ""));
+
                     resolve(jsonData);
                 } catch (err) {
-                    reject(new Error("Error al leer el archivo de orden."));
+                    reject(new Error("Error al procesar el archivo de orden (HTML). Asegúrate de que el formato sea correcto."));
                 }
             };
             reader.onerror = () => reject(new Error("Error al leer el archivo de orden."));
-            reader.readAsArrayBuffer(orderFile);
+            reader.readAsText(orderFile);
         });
 
+
         const [mainData, orderData] = await Promise.all([readDataFile, readOrderFile]);
+
+        if (!orderData || orderData.length === 0) {
+          toast({ title: "Error en Archivo de Orden", description: "No se pudo extraer ninguna fila de datos del archivo de orden. Revisa el archivo.", variant: "destructive" });
+          setStatus('error');
+          return;
+        }
 
         const groupedAndSortedData = processData(mainData, orderData);
 
         if (groupedAndSortedData && groupedAndSortedData.length > 0) {
             setProcessedData(groupedAndSortedData);
         } else {
-            // Check if status is not already 'error' to prevent multiple toasts
-            if (status !== 'error' && groupedAndSortedData === null) {
+            if (status !== 'error') {
               setStatus('error');
             }
         }
@@ -448,7 +477,7 @@ export default function ReporteRetailPage() {
                       <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
                           <UploadCloud className="w-12 h-12 text-primary/70" />
                           <p className="font-semibold mt-2">2. Archivo de Orden</p>
-                          <p className="text-xs text-muted-foreground">Excel que define el orden de documentos.</p>
+                          <p className="text-xs text-muted-foreground">Excel (HTML) que define el orden.</p>
                           <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
                               Seleccionar Archivo
                           </Button>
