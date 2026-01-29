@@ -101,17 +101,26 @@ const readOrderFileAsHTML = (file: File): Promise<any[]> => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const htmlContent = e.target?.result as string;
+                let htmlContent = e.target?.result as string;
                 if (!htmlContent) {
                     return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
                 }
 
+                // Clean content: remove XML declarations which can confuse the parser.
+                htmlContent = htmlContent.replace(/<\?xml[^>]*\?>/i, '').trim();
+                
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlContent, "text/html");
 
+                // Check for parser errors, which can happen with malformed content
+                if (doc.getElementsByTagName("parsererror").length > 0) {
+                     const errorContent = doc.getElementsByTagName("parsererror")[0].textContent;
+                     return reject(new Error(`Error al analizar el archivo de orden. Contenido del error: ${errorContent}`));
+                }
+
                 const tables = Array.from(doc.querySelectorAll("table"));
                 if (tables.length === 0) {
-                    return reject(new Error("No se encontró ninguna tabla en el archivo de orden. El archivo podría no ser un HTML válido."));
+                    return reject(new Error("No se encontró ninguna tabla en el archivo de orden. Esto puede ocurrir por problemas de codificación o un formato de archivo no estándar."));
                 }
                 
                 tables.sort((a, b) => b.rows.length - a.rows.length);
