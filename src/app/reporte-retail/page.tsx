@@ -45,116 +45,31 @@ const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cant. in.'
 const getAmount = (item: RetailData) => parseFloat(getValue(item, ['costo total.', 'costo total', 'importeenmon.local', 'wrbtr'])) || 0;
 const getPostingDate = (item: RetailData) => getValue(item, ['fecha ingreso', 'fechacontab.', 'bldat']);
 
-const readMainDataFile = (file: File): Promise<any[]> => {
+
+const readExcelFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const data = e.target?.result;
-                if (!data) return reject(new Error(`El archivo de datos ${file.name} está vacío.`));
+                if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
                 const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
                 
-                // Find headers dynamically instead of assuming a fixed range.
-                const jsonDataRaw: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-
-                if (jsonDataRaw.length === 0) {
-                     return reject(new Error(`No se encontraron filas de datos en ${file.name}.`));
+                if (jsonData.length === 0) {
+                     return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
                 }
 
-                let headerRowIndex = -1;
-                const headerKeys = ['material', 'ord. de compra', 'ebeln', 'proveedor', 'lifnr'];
-
-                for (let i = 0; i < jsonDataRaw.length; i++) {
-                    const row = jsonDataRaw[i];
-                    const rowString = row.join(' ').toLowerCase();
-                    if (headerKeys.some(key => rowString.includes(key))) {
-                        headerRowIndex = i;
-                        break;
-                    }
-                }
-
-                if (headerRowIndex === -1) {
-                    return reject(new Error(`No se pudo encontrar la fila de encabezado en el archivo de datos ${file.name}.`));
-                }
-                
-                const finalJsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
-                
-                if (finalJsonData.length === 0) {
-                    return reject(new Error(`No se encontraron datos debajo de la fila de encabezado en ${file.name}.`));
-                }
-
-                resolve(finalJsonData);
+                resolve(jsonData);
             } catch (err: any) {
-                reject(new Error(`Error al procesar el archivo de datos ${file.name}: ${err.message}`));
+                reject(new Error(`Error al procesar el archivo ${file.name}: ${err.message}`));
             }
         };
         reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
         reader.readAsArrayBuffer(file);
-    });
-};
-
-const readOrderFileAsHTML = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const htmlString = e.target?.result as string;
-                if (!htmlString) {
-                    return reject(new Error(`El archivo de orden ${file.name} está vacío.`));
-                }
-
-                // Use XLSX to parse the HTML string
-                const workbook = XLSX.read(htmlString, { type: 'string' });
-                
-                const sheetName = workbook.SheetNames[0];
-                if (!sheetName) {
-                    return reject(new Error("XLSX no pudo encontrar una tabla procesable en el archivo de orden (HTML)."));
-                }
-                const worksheet = workbook.Sheets[sheetName];
-
-                // Convert to array of arrays to find header
-                const jsonDataAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-
-                if (jsonDataAsArray.length === 0) {
-                    return reject(new Error(`XLSX no extrajo filas de la tabla HTML en ${file.name}.`));
-                }
-
-                let headerRowIndex = -1;
-                for (let i = 0; i < jsonDataAsArray.length; i++) {
-                    const row = jsonDataAsArray[i];
-                    if (!Array.isArray(row)) continue;
-                    const rowString = row.join(' ').toUpperCase();
-                    const hasEbeln = rowString.includes("EBELN");
-                    const hasBelnr = rowString.includes("BELNR");
-                    if (hasEbeln && hasBelnr) {
-                        headerRowIndex = i;
-                        break;
-                    }
-                }
-
-                if (headerRowIndex === -1) {
-                    const rawDataSample = JSON.stringify(jsonDataAsArray.slice(0, 10));
-                    return reject(new Error(`No se pudo encontrar la fila de encabezado con 'EBELN' y 'BELNR' en el archivo de orden. Muestra de datos: ${rawDataSample}`));
-                }
-
-                // Now convert to JSON objects using the found header row
-                const finalJsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
-
-                if (finalJsonData.length === 0) {
-                     return reject(new Error("No se extrajeron datos de la tabla en el archivo de orden, incluso después de encontrar los encabezados."));
-                }
-
-                resolve(finalJsonData);
-
-            } catch (err: any) {
-                reject(new Error(`Error al procesar el archivo HTML de orden ${file.name} con XLSX: ${err.message}`));
-            }
-        };
-        reader.onerror = () => reject(new Error(`Error al leer el archivo ${file.name}.`));
-        reader.readAsText(file, 'ISO-8859-1'); // Reading as text with correct encoding
     });
 };
 
@@ -303,8 +218,8 @@ export default function ReporteRetailPage() {
     
     try {
         const [mainData, orderData] = await Promise.all([
-            readMainDataFile(dataFile),
-            readOrderFileAsHTML(orderFile)
+            readExcelFile(dataFile),
+            readExcelFile(orderFile)
         ]);
 
         const groupedAndSortedData = processData(mainData, orderData);
@@ -478,7 +393,7 @@ export default function ReporteRetailPage() {
                       <div className="flex flex-col items-center p-6 border-2 border-dashed rounded-lg">
                           <UploadCloud className="w-12 h-12 text-primary/70" />
                           <p className="font-semibold mt-2">2. Archivo de Orden</p>
-                          <p className="text-xs text-muted-foreground">HTML de SAP guardado como .xls.</p>
+                          <p className="text-xs text-muted-foreground">El archivo de orden de SAP.</p>
                           <Button onClick={() => orderFileInputRef.current?.click()} className="mt-4" variant="outline">
                               Seleccionar Archivo
                           </Button>
