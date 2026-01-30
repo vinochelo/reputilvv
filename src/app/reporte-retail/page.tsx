@@ -53,17 +53,50 @@ const readExcelFile = (file: File): Promise<any[]> => {
             try {
                 const data = e.target?.result;
                 if (!data) return reject(new Error(`El archivo ${file.name} está vacío.`));
+
                 const workbook = XLSX.read(data, { type: 'array' });
                 const sheetName = workbook.SheetNames[0];
                 if (!sheetName) return reject(new Error(`No se encontraron hojas en ${file.name}.`));
-                const worksheet = workbook.Sheets[sheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
                 
+                const worksheet = workbook.Sheets[sheetName];
+
+                // 1. Convert to array of arrays to find header row
+                const sheetAsArray: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+
+                if (sheetAsArray.length === 0) {
+                     return reject(new Error(`No se encontraron filas de datos en ${file.name}.`));
+                }
+
+                // 2. Find the header row index by looking for key columns
+                let headerRowIndex = -1;
+                const headerKeywords = ['material', 'ebeln', 'belnr', 'menge', 'lifnr', 'bldat', 'wrbtr'];
+                for (let i = 0; i < Math.min(sheetAsArray.length, 10); i++) { // Check first 10 rows
+                    const row = sheetAsArray[i];
+                    if (!Array.isArray(row)) continue;
+                    
+                    const normalizedRow = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\.\s]/g, ''));
+                    const foundKeywords = headerKeywords.filter(keyword => normalizedRow.includes(keyword));
+                    
+                    // If we find at least 3 keywords, we can be confident this is the header.
+                    if (foundKeywords.length >= 3) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    return reject(new Error(`No se pudo encontrar una fila de encabezado válida en ${file.name}. Revisa que el archivo contenga columnas como 'Material', 'EBELN', 'BELNR', etc.`));
+                }
+
+                // 3. Re-parse the sheet from the correct header row
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
+
                 if (jsonData.length === 0) {
-                     return reject(new Error(`No se encontraron filas de datos en ${file.name}. Por favor, asegúrate de que la primera fila contenga los encabezados.`));
+                     return reject(new Error(`No se encontraron datos debajo de la fila de encabezado en ${file.name}.`));
                 }
 
                 resolve(jsonData);
+
             } catch (err: any) {
                 reject(new Error(`Error al procesar el archivo ${file.name}: ${err.message}`));
             }
@@ -509,3 +542,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
