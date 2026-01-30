@@ -77,8 +77,8 @@ const readExcelFile = (file: File): Promise<any[]> => {
                     const normalizedRow = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\.\s]/g, ''));
                     const foundKeywords = headerKeywords.filter(keyword => normalizedRow.includes(keyword));
                     
-                    // If we find at least 3 keywords, we can be confident this is the header.
-                    if (foundKeywords.length >= 3) {
+                    // If we find at least 2 keywords, we can be confident this is the header.
+                    if (foundKeywords.length >= 2) {
                         headerRowIndex = i;
                         break;
                     }
@@ -542,5 +542,3 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
-
-    
