@@ -45,6 +45,18 @@ const getQuantity = (item: RetailData) => parseFloat(getValue(item, ['cant. in.'
 const getAmount = (item: RetailData) => parseFloat(getValue(item, ['costo total.', 'costo total', 'importeenmon.local', 'wrbtr'])) || 0;
 const getPostingDate = (item: RetailData) => getValue(item, ['fecha ingreso', 'fechacontab.', 'bldat']);
 
+const normalizedHeaderKeywords = [
+    'ord. de compra', 'ebeln', 'orden de compra',
+    'proveedor', 'lifnr',
+    'nombre proveedor', 'nombredelproveedor',
+    'material',
+    'descripcion material', 'textobrevedematerial',
+    'cant. in.', 'cantidad', 'menge',
+    'costo total.', 'costo total', 'importeenmon.local', 'wrbtr',
+    'fecha ingreso', 'fechacontab.', 'bldat',
+    'documento no.', 'belnr'
+].map(k => k.toLowerCase().replace(/[\.\s]/g, ''));
+
 
 const readExcelFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
@@ -69,13 +81,12 @@ const readExcelFile = (file: File): Promise<any[]> => {
 
                 // 2. Find the header row index by looking for key columns
                 let headerRowIndex = -1;
-                const headerKeywords = ['material', 'ebeln', 'belnr', 'menge', 'lifnr', 'bldat', 'wrbtr'];
                 for (let i = 0; i < Math.min(sheetAsArray.length, 10); i++) { // Check first 10 rows
                     const row = sheetAsArray[i];
                     if (!Array.isArray(row)) continue;
                     
                     const normalizedRow = row.map(cell => String(cell || '').trim().toLowerCase().replace(/[\.\s]/g, ''));
-                    const foundKeywords = headerKeywords.filter(keyword => normalizedRow.includes(keyword));
+                    const foundKeywords = normalizedHeaderKeywords.filter(keyword => normalizedRow.includes(keyword));
                     
                     // If we find at least 2 keywords, we can be confident this is the header.
                     if (foundKeywords.length >= 2) {
@@ -542,3 +553,5 @@ export default function ReporteRetailPage() {
     </main>
   );
 }
+
+    
