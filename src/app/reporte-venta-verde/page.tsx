@@ -462,22 +462,22 @@ export default function ReporteVentaVerdePage() {
                   })}
                   </TableBody>
                   <TableFooter>
-                    <TableRow className="bg-accent/30 hover:bg-accent/30 font-bold">
+                    <TableRow className="bg-accent/30 hover:bg-accent/30">
                       <TableCell className="text-left font-bold px-1 py-1 border border-neutral-300">*</TableCell>
                       <TableCell colSpan={8} className="px-1 py-1 border border-neutral-300"></TableCell>
-                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-right font-medium px-1 py-1 border border-neutral-300">
                         {group.totalCantidad.toFixed(3)}
                       </TableCell>
-                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-right font-medium px-1 py-1 border border-neutral-300">
                         {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                       </TableCell>
                       <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300 text-[9px]">
                         {group.totalCostoTotal.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-right font-medium px-1 py-1 border border-neutral-300">
                         {group.totalPrecioVenta.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-right font-medium px-1 py-1 border border-neutral-300">
                         {group.totalValorAPagar.toFixed(2)}
                       </TableCell>
                     </TableRow>
@@ -489,3 +489,4 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
