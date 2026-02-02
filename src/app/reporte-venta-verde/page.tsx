@@ -431,9 +431,9 @@ export default function ReporteVentaVerdePage() {
                       <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Material</TableHead>
                       <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Texto breve de material</TableHead>
                       <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cantidad</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Utilidad %</TableHead>
                       <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Costo Total</TableHead>
                       <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Precio Venta</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Utilidad %</TableHead>
                       <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Valor a pagar</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -453,9 +453,9 @@ export default function ReporteVentaVerdePage() {
                         <TableCell className="px-1 py-1 border border-neutral-300">{item['Material']}</TableCell>
                         <TableCell className="px-1 py-1 border border-neutral-300">{item['Texto breve de material']}</TableCell>
                         <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right px-1 py-1 border border-neutral-300 font-medium text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
                         <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                       </TableRow>
                       )
@@ -468,14 +468,14 @@ export default function ReporteVentaVerdePage() {
                       <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
                         {group.totalCantidad.toFixed(3)}
                       </TableCell>
+                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
+                        {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
+                      </TableCell>
                       <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300 text-[9px]">
                         {group.totalCostoTotal.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
                         {group.totalPrecioVenta.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
-                        {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                       </TableCell>
                       <TableCell className="text-right font-bold px-1 py-1 border border-neutral-300">
                         {group.totalValorAPagar.toFixed(2)}
