@@ -233,20 +233,22 @@ export default function ReporteVentaVerdeBetaPage() {
                 body: body,
                 foot: foot,
                 theme: 'grid',
-                lineColor: [0, 0, 0],
-                lineWidth: 0.1,
                 headStyles: {
                     fillColor: [221, 237, 255],
                     textColor: 0,
                     fontSize: 5,
                     cellPadding: 1,
                     halign: 'center',
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
                 },
                 bodyStyles: {
                     fontSize: 5,
                     textColor: 0,
                     cellPadding: 1,
                     halign: 'center',
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
                 },
                 footStyles: {
                     fillColor: [250, 235, 215],
@@ -254,6 +256,8 @@ export default function ReporteVentaVerdeBetaPage() {
                     fontSize: 6,
                     cellPadding: 1,
                     halign: 'center',
+                    lineColor: [0, 0, 0],
+                    lineWidth: 0.1,
                 },
                 columnStyles: {
                     1: { cellWidth: 20 },
