@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
@@ -217,13 +218,13 @@ export default function ReporteVentaVerdeBetaPage() {
             const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
 
             const foot = [[
-                { content: '*', styles: { halign: 'center' } },
+                { content: '*', styles: { halign: 'center', fontStyle: 'normal' } },
                 { content: '', colSpan: 8 },
-                { content: group.totalCantidad.toFixed(3), styles: { halign: 'right' } },
-                { content: totalUtilidadAvg, styles: { halign: 'right' } },
-                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', fontSize: 7, halign: 'right' } },
-                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'right' } },
-                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'right' } },
+                { content: group.totalCantidad.toFixed(3), styles: { halign: 'center', fontStyle: 'normal' } },
+                { content: totalUtilidadAvg, styles: { halign: 'center', fontStyle: 'normal' } },
+                { content: group.totalCostoTotal.toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fontSize: 7 } },
+                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
+                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
             ]];
 
             autoTable(pdf, {

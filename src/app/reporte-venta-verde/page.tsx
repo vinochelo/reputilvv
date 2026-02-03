@@ -421,20 +421,20 @@ export default function ReporteVentaVerdePage() {
               <Table className="border-collapse text-[8px]">
                   <TableHeader>
                     <TableRow className="bg-primary/20 hover:bg-primary/20">
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Doc.mat.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Factura</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nº doc.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Ce.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Fecha Factura</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Proveedor</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nombre del proveedor</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Material</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Texto breve de material</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cantidad</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Utilidad %</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Costo Total</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Precio Venta</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Valor a pagar</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Doc.mat.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Nº doc.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Ce.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Fecha Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Nombre del proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-400">Texto breve de material</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-400">Cantidad</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-400">Utilidad %</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-400">Costo Total</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-400">Precio Venta</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-400">Valor a pagar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -443,41 +443,41 @@ export default function ReporteVentaVerdePage() {
                       const formattedDate = Number.isNaN(date.getTime()) ? '' : `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
                       return (
                       <TableRow key={itemIndex}>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Documento material']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Factura']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{getDocId(item)}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Centro']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{formattedDate}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Proveedor']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Nombre del proveedor']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Material']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Texto breve de material']}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300 text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Documento material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Factura']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{getDocId(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Centro']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{formattedDate}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Nombre del proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-400">{item['Texto breve de material']}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-400">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-400">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-400 text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-400">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-400">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                       </TableRow>
                       )
                   })}
                   </TableBody>
                   <TableFooter>
                     <TableRow className="bg-accent/30 hover:bg-accent/30">
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">*</TableCell>
-                      <TableCell colSpan={8} className="px-1 py-1 border border-neutral-300"></TableCell>
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-400">*</TableCell>
+                      <TableCell colSpan={8} className="px-1 py-1 border border-neutral-400"></TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-400">
                         {group.totalCantidad.toFixed(3)}
                       </TableCell>
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-400">
                         {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                       </TableCell>
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300 text-[9px]">
+                      <TableCell className="text-center font-bold px-1 py-1 border border-neutral-400 text-[9px]">
                         {group.totalCostoTotal.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-400">
                         {group.totalPrecioVenta.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-400">
                         {group.totalValorAPagar.toFixed(2)}
                       </TableCell>
                     </TableRow>
