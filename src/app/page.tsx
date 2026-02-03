@@ -31,7 +31,7 @@ const mainTools: Tool[] = [
   {
     title: 'Envío correos en masa',
     description: 'Envía correos personalizados a una lista de contactos.',
-    href: 'https://correos-sigma.vercel.app/',
+    href: 'https://mails-gamma.vercel.app/',
     icon: Mail,
   },
   {
