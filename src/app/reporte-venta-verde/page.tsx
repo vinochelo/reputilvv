@@ -260,11 +260,13 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    1: { cellWidth: 20 },
-                    4: { cellWidth: 18 },
-                    6: { cellWidth: 30 },
-                    7: { cellWidth: 22 },
-                    8: { cellWidth: 30 },
+                    1: { cellWidth: 18 },
+                    2: { cellWidth: 15 },
+                    4: { cellWidth: 15 },
+                    5: { cellWidth: 15 },
+                    6: { cellWidth: 40 },
+                    7: { cellWidth: 20 },
+                    8: { cellWidth: 45 },
                 }
             });
 
