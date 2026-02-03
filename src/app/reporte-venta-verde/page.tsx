@@ -229,6 +229,7 @@ export default function ReporteVentaVerdePage() {
 
             autoTable(pdf, {
                 startY: 20,
+                margin: { left: 14 },
                 head: head,
                 body: body,
                 foot: foot,
