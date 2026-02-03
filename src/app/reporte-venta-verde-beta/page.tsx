@@ -217,20 +217,12 @@ export default function ReporteVentaVerdeBetaPage() {
             const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
 
             const foot = [[
-                '*',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                '',
-                { content: group.totalCantidad.toFixed(3), styles: { halign: 'right' } },
-                { content: totalUtilidadAvg, styles: { halign: 'right' } },
-                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', halign: 'right', fontSize: 7 } },
-                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'right' } },
-                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'right' } },
+                '*', '', '', '', '', '', '', '', '',
+                group.totalCantidad.toFixed(3),
+                totalUtilidadAvg,
+                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', fontSize: 7 } },
+                group.totalPrecioVenta.toFixed(2),
+                group.totalValorAPagar.toFixed(2),
             ]];
 
             autoTable(pdf, {
@@ -239,32 +231,32 @@ export default function ReporteVentaVerdeBetaPage() {
                 body: body,
                 foot: foot,
                 theme: 'grid',
+                lineColor: [0, 0, 0],
+                lineWidth: 0.1,
                 headStyles: {
                     fillColor: [221, 237, 255],
                     textColor: 0,
                     fontSize: 5,
                     cellPadding: 1,
+                    halign: 'center',
                 },
                 bodyStyles: {
                     fontSize: 5,
                     textColor: 0,
                     cellPadding: 1,
+                    halign: 'center',
                 },
                 footStyles: {
                     fillColor: [250, 235, 215],
                     textColor: 0,
                     fontSize: 6,
                     cellPadding: 1,
+                    halign: 'center',
                 },
                 columnStyles: {
                     1: { cellWidth: 20 }, // Factura
                     4: { cellWidth: 18 }, // Fecha Factura
                     7: { cellWidth: 22 }, // Material
-                    9: { halign: 'right' },
-                    10: { halign: 'right' },
-                    11: { halign: 'right' },
-                    12: { halign: 'right' },
-                    13: { halign: 'right' },
                 },
                 didDrawPage: (data) => {
                     const str = "Página " + pdf.internal.getNumberOfPages();
