@@ -218,13 +218,13 @@ export default function ReporteVentaVerdePage() {
             const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
 
             const foot = [[
-                { content: '*', styles: { halign: 'center' } },
+                { content: '*', styles: { halign: 'center', fontStyle: 'normal' } },
                 { content: '', colSpan: 8 },
-                { content: group.totalCantidad.toFixed(3), styles: { halign: 'center' } },
-                { content: totalUtilidadAvg, styles: { halign: 'center' } },
+                { content: group.totalCantidad.toFixed(3), styles: { halign: 'center', fontStyle: 'normal' } },
+                { content: totalUtilidadAvg, styles: { halign: 'center', fontStyle: 'normal' } },
                 { content: group.totalCostoTotal.toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fontSize: 7 } },
-                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'center' } },
-                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'center' } },
+                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
+                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
             ]];
 
             autoTable(pdf, {
@@ -260,19 +260,19 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 15 },
+                    1: { cellWidth: 24 },
+                    2: { cellWidth: 20 },
+                    3: { cellWidth: 8 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
                     6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 22 },
+                    7: { cellWidth: 28 },
                     8: { cellWidth: 45, fontSize: 5 },
-                    9: { cellWidth: 12 },
-                    10: { cellWidth: 12 },
+                    9: { cellWidth: 10 },
+                    10: { cellWidth: 10 },
                 },
                 didParseCell: function (data) {
                     if (data.row.section === 'body') {
-                        // For all columns except 6 and 8
                         if (data.column.index !== 6 && data.column.index !== 8) {
                             data.cell.styles.fontSize = 7;
                         } else {
@@ -280,7 +280,7 @@ export default function ReporteVentaVerdePage() {
                         }
                     }
                     if (data.row.section === 'foot') {
-                        if (data.column.index === 11) { // Costo Total
+                        if (data.column.index === 11) {
                              data.cell.styles.fontStyle = 'bold';
                         }
                     }
@@ -486,6 +486,3 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
-
-
-    
