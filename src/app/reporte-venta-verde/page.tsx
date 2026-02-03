@@ -208,14 +208,14 @@ export default function ReporteVentaVerdePage() {
                     item['Material'],
                     item['Texto breve de material'],
                     (item['Cantidad'] ?? 0).toFixed(2),
-                    (item['Utilidad %'] ?? 0).toFixed(2),
+                    (item['Utilidad %'] ?? 0).toFixed(0),
                     (item['Costo Total'] ?? 0).toFixed(2),
                     (item['Precio Venta'] ?? 0).toFixed(2),
                     (item['Valor a pagar'] ?? 0).toFixed(2)
                 ];
             });
 
-            const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
+            const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(0) : '0';
 
             const foot = [[
                 '*',
@@ -491,3 +491,5 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
+    
