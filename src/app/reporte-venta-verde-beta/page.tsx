@@ -253,18 +253,12 @@ export default function ReporteVentaVerdeBetaPage() {
                     textColor: 0,
                     fontSize: 6,
                     cellPadding: 1,
+                    halign: 'center',
                 },
                 columnStyles: {
                     1: { cellWidth: 20 },
                     4: { cellWidth: 18 },
                     7: { cellWidth: 22 },
-                },
-                didDrawPage: (data) => {
-                    const str = "Página " + pdf.internal.getNumberOfPages();
-                    pdf.setFontSize(10);
-                    const pageSize = pdf.internal.pageSize;
-                    const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
-                    pdf.text(str, data.settings.margin.left, pageHeight - 10);
                 }
             });
 
