@@ -217,12 +217,13 @@ export default function ReporteVentaVerdeBetaPage() {
             const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
 
             const foot = [[
-                '*', '', '', '', '', '', '', '', '',
-                group.totalCantidad.toFixed(3),
-                totalUtilidadAvg,
-                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', fontSize: 7 } },
-                group.totalPrecioVenta.toFixed(2),
-                group.totalValorAPagar.toFixed(2),
+                { content: '*', styles: { halign: 'center' } },
+                { content: '', colSpan: 8 },
+                { content: group.totalCantidad.toFixed(3), styles: { halign: 'right' } },
+                { content: totalUtilidadAvg, styles: { halign: 'right' } },
+                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', fontSize: 7, halign: 'right' } },
+                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'right' } },
+                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'right' } },
             ]];
 
             autoTable(pdf, {
@@ -251,12 +252,11 @@ export default function ReporteVentaVerdeBetaPage() {
                     textColor: 0,
                     fontSize: 6,
                     cellPadding: 1,
-                    halign: 'center',
                 },
                 columnStyles: {
-                    1: { cellWidth: 20 }, // Factura
-                    4: { cellWidth: 18 }, // Fecha Factura
-                    7: { cellWidth: 22 }, // Material
+                    1: { cellWidth: 20 },
+                    4: { cellWidth: 18 },
+                    7: { cellWidth: 22 },
                 },
                 didDrawPage: (data) => {
                     const str = "Página " + pdf.internal.getNumberOfPages();
