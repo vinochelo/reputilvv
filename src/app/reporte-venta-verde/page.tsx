@@ -414,27 +414,27 @@ export default function ReporteVentaVerdePage() {
       {/* Hidden container for html2canvas to render the PDF content */}
       <div className="absolute -left-[9999px] top-0 opacity-0" ref={pdfContentRef}>
         {processedData?.map((group) => (
-            <div key={group.n_doc} className="p-4 bg-white text-black">
+            <div key={group.n_doc} className="p-4 bg-white text-black w-[1123px]">
               <header className="mb-2">
                   <h2 className="text-primary text-base font-normal">Reporte utilidad venta en verde</h2>
               </header>
               <Table className="border-collapse text-[8px]">
                   <TableHeader>
                     <TableRow className="bg-primary/20 hover:bg-primary/20">
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Doc.mat.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Factura</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Nº doc.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Ce.</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Fecha Factura</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Proveedor</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Nombre del proveedor</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Material</TableHead>
-                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Texto breve de material</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Cantidad</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Utilidad %</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Costo Total</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Precio Venta</TableHead>
-                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Valor a pagar</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Doc.mat.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nº doc.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Ce.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Fecha Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Nombre del proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-neutral-300">Texto breve de material</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Cantidad</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Utilidad %</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Costo Total</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Precio Venta</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-neutral-300">Valor a pagar</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -443,41 +443,41 @@ export default function ReporteVentaVerdePage() {
                       const formattedDate = Number.isNaN(date.getTime()) ? '' : `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
                       return (
                       <TableRow key={itemIndex}>
-                        <TableCell className="px-1 py-1 border border-black">{item['Documento material']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Factura']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{getDocId(item)}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Centro']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{formattedDate}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Proveedor']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Nombre del proveedor']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Material']}</TableCell>
-                        <TableCell className="px-1 py-1 border border-black">{item['Texto breve de material']}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-black font-medium text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Documento material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Factura']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{getDocId(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Centro']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{formattedDate}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Nombre del proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-neutral-300">{item['Texto breve de material']}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300 text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-neutral-300">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
                       </TableRow>
                       )
                   })}
                   </TableBody>
                   <TableFooter>
                     <TableRow className="bg-accent/30 hover:bg-accent/30">
-                      <TableCell className="text-center px-1 py-1 border border-black">*</TableCell>
-                      <TableCell colSpan={8} className="px-1 py-1 border border-black"></TableCell>
-                      <TableCell className="text-center px-1 py-1 border border-black">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">*</TableCell>
+                      <TableCell colSpan={8} className="px-1 py-1 border border-neutral-300"></TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
                         {group.totalCantidad.toFixed(3)}
                       </TableCell>
-                      <TableCell className="text-center px-1 py-1 border border-black">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
                         {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
                       </TableCell>
-                      <TableCell className="text-center px-1 py-1 border border-black text-[9px]">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300 text-[9px]">
                         {group.totalCostoTotal.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center px-1 py-1 border border-black">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
                         {group.totalPrecioVenta.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center px-1 py-1 border border-black">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-neutral-300">
                         {group.totalValorAPagar.toFixed(2)}
                       </TableCell>
                     </TableRow>
