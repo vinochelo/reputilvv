@@ -3,11 +3,12 @@
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, FileX2, ArrowLeft, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import type { ExcelData, GroupedData } from '@/lib/types';
@@ -20,6 +21,7 @@ export default function ReporteVentaVerdeBetaPage() {
   const [status, setStatus] = useState<Status>('idle');
   const [fileName, setFileName] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cancelPdfGeneration = useRef(false);
@@ -32,6 +34,7 @@ export default function ReporteVentaVerdeBetaPage() {
     };
     generate();
   }, [processedData, status]);
+
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
@@ -167,9 +170,9 @@ export default function ReporteVentaVerdeBetaPage() {
   };
 
   const handleDownloadPdf = async () => {
-    if (!processedData) {
+    if (!pdfContentRef.current) {
         setStatus('error');
-        toast({ title: "Error", description: "No hay datos procesados para generar el PDF.", variant: "destructive" });
+        toast({ title: "Error", description: "No se encontró el contenido para generar el PDF.", variant: "destructive" });
         return;
     };
   
@@ -178,119 +181,64 @@ export default function ReporteVentaVerdeBetaPage() {
     cancelPdfGeneration.current = false;
     await new Promise(resolve => setTimeout(resolve, 50));
     
-    try {
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const totalPages = processedData.length;
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const reportElements = Array.from(pdfContentRef.current.children);
+    let successfulPages = 0;
+    
+    const margin = 5;
+    const imageWidth = pdfWidth - (margin * 2);
 
-        for (let i = 0; i < totalPages; i++) {
-            if (cancelPdfGeneration.current) break;
-
-            const group = processedData[i];
+    for (let i = 0; i < reportElements.length; i++) {
+      if (cancelPdfGeneration.current) break;
+      const reportElement = reportElements[i] as HTMLElement;
+      if (reportElement) {
+        try {
+            const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95); 
+            
             if (i > 0) pdf.addPage();
+  
+            const imgProps = pdf.getImageProperties(imgData);
+            const imageHeight = (imgProps.height * imageWidth) / imgProps.width;
             
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(12);
-            pdf.text('Reporte utilidad venta en verde', 14, 15);
+            pdf.addImage(imgData, 'JPEG', margin, margin, imageWidth, imageHeight);
+            successfulPages++;
+            setProgress(((i + 1) / reportElements.length) * 100);
             
-            const head = [['Doc.mat.', 'Factura', 'Nº doc.', 'Ce.', 'Fecha Factura', 'Proveedor', 'Nombre del proveedor', 'Material', 'Texto breve de material', 'Cantidad', 'Utilidad %', 'Costo Total', 'Precio Venta', 'Valor a pagar']];
-            
-            const body = group.items.map(item => {
-                const date = new Date(item['Fecha Factura']);
-                const formattedDate = Number.isNaN(date.getTime()) ? '' : `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
-                return [
-                    item['Documento material'],
-                    item['Factura'],
-                    getDocId(item),
-                    item['Centro'],
-                    formattedDate,
-                    item['Proveedor'],
-                    item['Nombre del proveedor'],
-                    item['Material'],
-                    item['Texto breve de material'],
-                    (item['Cantidad'] ?? 0).toFixed(3),
-                    (item['Utilidad %'] ?? 0).toFixed(2),
-                    (item['Costo Total'] ?? 0).toFixed(2),
-                    (item['Precio Venta'] ?? 0).toFixed(2),
-                    (item['Valor a pagar'] ?? 0).toFixed(2)
-                ];
-            });
-
-            const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
-
-            const foot = [[
-                { content: '*', styles: { halign: 'center', fontStyle: 'normal' } },
-                { content: '', colSpan: 8 },
-                { content: group.totalCantidad.toFixed(3), styles: { halign: 'center', fontStyle: 'normal' } },
-                { content: totalUtilidadAvg, styles: { halign: 'center', fontStyle: 'normal' } },
-                { content: group.totalCostoTotal.toFixed(2), styles: { halign: 'center', fontStyle: 'bold', fontSize: 7 } },
-                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
-                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'center', fontStyle: 'normal' } },
-            ]];
-
-            autoTable(pdf, {
-                startY: 20,
-                head: head,
-                body: body,
-                foot: foot,
-                theme: 'grid',
-                headStyles: {
-                    fillColor: [221, 237, 255],
-                    textColor: 0,
-                    fontSize: 5,
-                    cellPadding: 1,
-                    halign: 'center',
-                    lineColor: [0, 0, 0],
-                    lineWidth: 0.1,
-                },
-                bodyStyles: {
-                    fontSize: 5,
-                    textColor: 0,
-                    cellPadding: 1,
-                    halign: 'center',
-                    lineColor: [0, 0, 0],
-                    lineWidth: 0.1,
-                },
-                footStyles: {
-                    fillColor: [250, 235, 215],
-                    textColor: 0,
-                    fontSize: 6,
-                    cellPadding: 1,
-                    halign: 'center',
-                    lineColor: [0, 0, 0],
-                    lineWidth: 0.1,
-                },
-                columnStyles: {
-                    1: { cellWidth: 20 },
-                    4: { cellWidth: 18 },
-                    7: { cellWidth: 22 },
-                }
-            });
-
-            setProgress(((i + 1) / totalPages) * 100);
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => setTimeout(resolve, 10)); // Shorter delay
+        } catch(e) {
+            console.error(`Error processing page ${i + 1} for PDF:`, e);
         }
+      }
+    }
 
-        if (cancelPdfGeneration.current) {
-          setStatus('idle');
-          toast({ title: "Generación de PDF cancelada" });
-          return;
-        }
-      
-        if (processedData.length > 0) {
-          pdf.save('reporte_venta_en_verde_beta.pdf');
-          setStatus('success');
-          toast({ title: "¡Éxito! PDF generado.", description: "La descarga de tu archivo ha comenzado." });
-        } else {
-            setStatus('error');
-        }
-
-    } catch (e: any) {
-        console.error("Error generating PDF with autoTable:", e);
-        toast({ title: "Error al generar el PDF", description: e.message || "Ocurrió un error inesperado.", variant: "destructive" });
+    if (cancelPdfGeneration.current) {
+      setStatus('idle');
+      toast({ title: "Generación de PDF cancelada" });
+      return;
+    }
+  
+    if (successfulPages > 0) {
+      try {
+        pdf.save('reporte_venta_en_verde_respaldo.pdf');
+        setStatus('success');
+        toast({ title: "¡Éxito! PDF generado.", description: "La descarga de tu archivo ha comenzado." });
+      } catch (e) {
+        console.error("Error saving PDF:", e);
+        toast({ title: "Error al guardar el PDF", description: "El documento es demasiado grande. Intenta con menos datos.", variant: "destructive" });
+        setStatus('error');
+      }
+    } else {
+        toast({ title: "No se generó el PDF", description: "No se pudo procesar ningún reporte.", variant: "destructive" });
         setStatus('error');
     }
   };
 
+  const handleCancelPdfGeneration = () => {
+    cancelPdfGeneration.current = true;
+  };
+  
   const resetState = () => {
     setProcessedData(null);
     setFileName(null);
@@ -323,7 +271,7 @@ export default function ReporteVentaVerdeBetaPage() {
                             {Math.round(progress)}%
                         </p>
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => (cancelPdfGeneration.current = true)}>
+                    <Button variant="destructive" size="sm" onClick={handleCancelPdfGeneration}>
                         <XCircle className="mr-2 h-4 w-4" />
                         Cancelar
                     </Button>
@@ -387,10 +335,10 @@ export default function ReporteVentaVerdeBetaPage() {
 
       <div className="text-center mb-12">
         <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Reportes Venta en Verde (Beta Rápido)
+          Reportes de utilidad venta en verde (Respaldo)
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Versión ultra-rápida. Genera el PDF directamente desde los datos, sin renderizar HTML.
+          Versión de respaldo que genera el PDF usando una captura de la previsualización HTML. Es más lento pero puede servir si la versión principal falla.
         </p>
       </div>
 
@@ -399,6 +347,82 @@ export default function ReporteVentaVerdeBetaPage() {
             {renderStatus()}
           </CardContent>
       </Card>
+      
+      {/* Hidden container for html2canvas to render the PDF content */}
+      <div className="absolute -left-[9999px] top-0 opacity-0" ref={pdfContentRef}>
+        {processedData?.map((group) => (
+            <div key={group.n_doc} className="p-4 bg-white text-black w-[1123px]">
+              <header className="mb-2">
+                  <h2 className="text-primary text-base font-normal">Reporte utilidad venta en verde</h2>
+              </header>
+              <Table className="border-collapse text-[8px]">
+                  <TableHeader>
+                    <TableRow className="bg-primary/20 hover:bg-primary/20">
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Doc.mat.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Nº doc.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Ce.</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Fecha Factura</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Nombre del proveedor</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Material</TableHead>
+                      <TableHead className="px-1 py-1 text-black font-bold border border-black">Texto breve de material</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Cantidad</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Utilidad %</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Costo Total</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Precio Venta</TableHead>
+                      <TableHead className="text-right px-1 py-1 text-black font-bold border border-black">Valor a pagar</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {group.items.map((item, itemIndex) => {
+                      const date = new Date(item['Fecha Factura']);
+                      const formattedDate = Number.isNaN(date.getTime()) ? '' : `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+                      return (
+                      <TableRow key={itemIndex}>
+                        <TableCell className="px-1 py-1 border border-black">{item['Documento material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Factura']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{getDocId(item)}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Centro']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{formattedDate}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Nombre del proveedor']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Material']}</TableCell>
+                        <TableCell className="px-1 py-1 border border-black">{item['Texto breve de material']}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Cantidad'] ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Utilidad %'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-black text-[9px]">{(item['Costo Total'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Precio Venta'] ?? 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-1 py-1 border border-black">{(item['Valor a pagar'] ?? 0).toFixed(2)}</TableCell>
+                      </TableRow>
+                      )
+                  })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="bg-accent/30 hover:bg-accent/30">
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">*</TableCell>
+                      <TableCell colSpan={8} className="px-1 py-1 border border-black"></TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">
+                        {group.totalCantidad.toFixed(3)}
+                      </TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">
+                        {group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00'}
+                      </TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">
+                        {group.totalCostoTotal.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">
+                        {group.totalPrecioVenta.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-center font-normal px-1 py-1 border border-black">
+                        {group.totalValorAPagar.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+              </Table>
+            </div>
+        ))}
+      </div>
     </main>
   );
 }

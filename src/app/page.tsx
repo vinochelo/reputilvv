@@ -51,8 +51,8 @@ const secondaryTools: Tool[] = [
     status: 'beta',
   },
   {
-    title: 'Reporte Venta en Verde (Beta)',
-    description: 'Generación de PDF ultra-rápida, sin previsualización en HTML.',
+    title: 'Reporte Venta en Verde (Respaldo)',
+    description: 'Versión de respaldo con previsualización HTML (más lento).',
     href: '/reporte-venta-verde-beta',
     icon: FileText,
     status: 'beta',
