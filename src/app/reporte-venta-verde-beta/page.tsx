@@ -216,7 +216,22 @@ export default function ReporteVentaVerdeBetaPage() {
 
             const totalUtilidadAvg = group.items.length > 0 ? (group.totalUtilidad / group.items.length).toFixed(2) : '0.00';
 
-            const foot = [['*', '', '', '', '', '', '', '', '', group.totalCantidad.toFixed(3), totalUtilidadAvg, { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold' } }, group.totalPrecioVenta.toFixed(2), group.totalValorAPagar.toFixed(2)]];
+            const foot = [[
+                '*',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                { content: group.totalCantidad.toFixed(3), styles: { halign: 'right' } },
+                { content: totalUtilidadAvg, styles: { halign: 'right' } },
+                { content: group.totalCostoTotal.toFixed(2), styles: { fontStyle: 'bold', halign: 'right', fontSize: 7 } },
+                { content: group.totalPrecioVenta.toFixed(2), styles: { halign: 'right' } },
+                { content: group.totalValorAPagar.toFixed(2), styles: { halign: 'right' } },
+            ]];
 
             autoTable(pdf, {
                 startY: 20,
@@ -226,22 +241,25 @@ export default function ReporteVentaVerdeBetaPage() {
                 theme: 'grid',
                 headStyles: {
                     fillColor: [221, 237, 255],
-                    textColor: 20,
+                    textColor: 0,
                     fontSize: 5,
                     cellPadding: 1,
                 },
                 bodyStyles: {
                     fontSize: 5,
+                    textColor: 0,
                     cellPadding: 1,
                 },
                 footStyles: {
                     fillColor: [250, 235, 215],
-                    textColor: 20,
+                    textColor: 0,
                     fontSize: 6,
                     cellPadding: 1,
-                    fontStyle: 'normal',
                 },
                 columnStyles: {
+                    1: { cellWidth: 20 }, // Factura
+                    4: { cellWidth: 18 }, // Fecha Factura
+                    7: { cellWidth: 22 }, // Material
                     9: { halign: 'right' },
                     10: { halign: 'right' },
                     11: { halign: 'right' },
