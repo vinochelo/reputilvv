@@ -243,7 +243,7 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 bodyStyles: {
-                    fontSize: 5,
+                    fontSize: 6,
                     textColor: 0,
                     cellPadding: 1,
                     halign: 'center',
@@ -264,9 +264,9 @@ export default function ReporteVentaVerdePage() {
                     2: { cellWidth: 15 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
-                    6: { cellWidth: 40 },
+                    6: { cellWidth: 40, fontSize: 5 },
                     7: { cellWidth: 20 },
-                    8: { cellWidth: 45 },
+                    8: { cellWidth: 45, fontSize: 5 },
                 }
             });
 
@@ -469,3 +469,6 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
+
+    
