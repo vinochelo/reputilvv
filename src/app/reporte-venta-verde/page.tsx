@@ -208,14 +208,14 @@ export default function ReporteVentaVerdePage() {
                     item['Material'],
                     item['Texto breve de material'],
                     (item['Cantidad'] ?? 0).toFixed(2),
-                    `${(item['Utilidad %'] ?? 0).toFixed(0)}%`,
+                    `${(item['Utilidad %'] ?? 0).toFixed(0)} %`,
                     (item['Costo Total'] ?? 0).toFixed(2),
                     (item['Precio Venta'] ?? 0).toFixed(2),
                     (item['Valor a pagar'] ?? 0).toFixed(2)
                 ];
             });
 
-            const totalUtilidadAvg = group.items.length > 0 ? `${(group.totalUtilidad / group.items.length).toFixed(0)}%` : '0%';
+            const totalUtilidadAvg = group.items.length > 0 ? `${(group.totalUtilidad / group.items.length).toFixed(0)} %` : '0 %';
 
             const foot = [[
                 '*',
@@ -261,13 +261,13 @@ export default function ReporteVentaVerdePage() {
                 },
                 columnStyles: {
                     0: { cellWidth: 18 },
-                    1: { cellWidth: 24 },
-                    2: { cellWidth: 18 },
+                    1: { cellWidth: 26 },
+                    2: { cellWidth: 20 },
                     3: { cellWidth: 8 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
                     6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 28 },
+                    7: { cellWidth: 30 },
                     8: { cellWidth: 45, fontSize: 5 },
                     9: { cellWidth: 10 },
                     10: { cellWidth: 12 },
