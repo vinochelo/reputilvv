@@ -228,7 +228,7 @@ export default function ReporteVentaVerdePage() {
 
             autoTable(pdf, {
                 startY: 20,
-                margin: { left: 14 },
+                margin: { left: 7 },
                 head: head,
                 body: body,
                 foot: foot,
@@ -260,19 +260,19 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 18 },
+                    0: { cellWidth: 19 },
                     1: { cellWidth: 22 },
-                    2: { cellWidth: 16 },
+                    2: { cellWidth: 18 },
                     3: { cellWidth: 9 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 16 },
-                    6: { cellWidth: 35, fontSize: 5 },
-                    7: { cellWidth: 32 },
-                    8: { cellWidth: 41, fontSize: 5 },
+                    6: { cellWidth: 37, fontSize: 5 },
+                    7: { cellWidth: 34 },
+                    8: { cellWidth: 44, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 10 },
-                    11: { cellWidth: 14 },
-                    12: { cellWidth: 15 },
+                    10: { cellWidth: 12 },
+                    11: { cellWidth: 15 },
+                    12: { cellWidth: 16 },
                     13: { cellWidth: 16 },
                 },
                 didParseCell: function (data) {
@@ -486,5 +486,6 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
 
 
