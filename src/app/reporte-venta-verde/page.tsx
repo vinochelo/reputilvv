@@ -261,19 +261,19 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 26 },
-                    2: { cellWidth: 16 },
-                    3: { cellWidth: 8 },
+                    0: { cellWidth: 14 },
+                    1: { cellWidth: 32 },
+                    2: { cellWidth: 14 },
+                    3: { cellWidth: 7 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
                     6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 25 },
+                    7: { cellWidth: 28 },
                     8: { cellWidth: 45, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 12 },
-                    11: { cellWidth: 13 },
-                    12: { cellWidth: 13 },
+                    10: { cellWidth: 10 },
+                    11: { cellWidth: 12 },
+                    12: { cellWidth: 12 },
                     13: { cellWidth: 13 },
                 },
                 didParseCell: function (data) {
@@ -284,17 +284,15 @@ export default function ReporteVentaVerdePage() {
                             data.cell.styles.fontSize = 5;
                         }
                     }
-                    if (data.row.section === 'foot') {
-                        if (data.column.index === 11) {
+                    if (data.row.section === 'foot' && data.column.index === 11) {
                              data.cell.styles.fontStyle = 'bold';
                              data.cell.styles.fontSize = 7;
                         }
-                    }
                 }
             });
 
             setProgress(((i + 1) / totalPages) * 100);
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise(resolve => setTimeout(resolve, 150));
         }
 
         if (cancelPdfGeneration.current) {
@@ -494,3 +492,4 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
