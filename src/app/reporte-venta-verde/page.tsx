@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw, Wand2, Sparkles } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw, Factory, FileText, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -35,7 +35,7 @@ export default function ReporteVentaVerdePage() {
 
   const getDocId = (item: any): number | string | undefined => {
     const keys = Object.keys(item);
-    const exactKey = keys.find(key => key.trim().toLowerCase() === 'nº documento');
+    const exactKey = keys.find(key => key.trim().toLowerCase() === 'nº doc.');
     if (exactKey && item[exactKey] !== null && item[exactKey] !== undefined) {
         return item[exactKey];
     }
@@ -156,7 +156,7 @@ export default function ReporteVentaVerdePage() {
       const firstRowKeys = Object.keys(data[0]).join(', ');
       toast({
         title: "No se pudo agrupar",
-        description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº documento' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
+        description: `No se encontraron datos para agrupar. Revisa que la columna 'Nº doc.' exista y tenga valores. Columnas encontradas: ${firstRowKeys}`,
         variant: "destructive",
       });
       return null;
@@ -263,7 +263,7 @@ export default function ReporteVentaVerdePage() {
                 columnStyles: {
                     0: { cellWidth: 14 },
                     1: { cellWidth: 32 },
-                    2: { cellWidth: 14 },
+                    2: { cellWidth: 12 },
                     3: { cellWidth: 7 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
@@ -274,7 +274,7 @@ export default function ReporteVentaVerdePage() {
                     10: { cellWidth: 10 },
                     11: { cellWidth: 12 },
                     12: { cellWidth: 12 },
-                    13: { cellWidth: 13 },
+                    13: { cellWidth: 15 },
                 },
                 didParseCell: function (data) {
                     if (data.row.section === 'body') {
@@ -292,7 +292,6 @@ export default function ReporteVentaVerdePage() {
             });
 
             setProgress(((i + 1) / totalPages) * 100);
-            await new Promise(resolve => setTimeout(resolve, 150));
         }
 
         if (cancelPdfGeneration.current) {
@@ -339,17 +338,17 @@ export default function ReporteVentaVerdePage() {
             );
         case 'generating':
             return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <div className="relative w-24 h-24">
-                        <Wand2 className="w-20 h-20 text-primary animate-wiggle" />
-                        <Sparkles className="absolute top-0 right-0 w-8 h-8 text-accent animate-pulse" />
-                        <Sparkles className="absolute bottom-2 left-0 w-6 h-6 text-accent/70 animate-pulse delay-200" />
+                <div className="flex flex-col items-center justify-center space-y-6 text-center">
+                    <div className="relative w-60 h-20 overflow-hidden">
+                        <FileText className="absolute top-1/2 -translate-y-1/2 w-10 h-10 text-green-600 animate-factory-in" />
+                        <Factory className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 text-primary/80" />
+                        <FileCheck className="absolute top-1/2 -translate-y-1/2 w-10 h-10 text-primary animate-factory-out" />
                     </div>
-                    <p className="text-xl font-semibold text-foreground">¡Haciendo un poco de magia!</p>
-                    <p className="text-sm text-muted-foreground">Tu reporte está casi listo...</p>
-                    <p className="text-3xl text-center font-bold text-primary tabular-nums animate-pulse">
-                        {Math.round(progress)}%
-                    </p>
+                    <p className="text-xl font-semibold text-foreground">Produciendo tu reporte...</p>
+                    <div className="w-full max-w-sm pt-2 space-y-2">
+                         <Progress value={progress} />
+                         {processedData && <p className="text-sm text-muted-foreground">Página {Math.min(Math.ceil(progress * processedData.length / 100), processedData.length)} de {processedData.length}</p>}
+                    </div>
                     <Button variant="destructive" size="sm" onClick={() => (cancelPdfGeneration.current = true)}>
                         <XCircle className="mr-2 h-4 w-4" />
                         Cancelar
