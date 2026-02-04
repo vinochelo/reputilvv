@@ -260,17 +260,17 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 30 },
-                    2: { cellWidth: 13 },
+                    0: { cellWidth: 18 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 15 },
                     3: { cellWidth: 9 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
                     6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 24 },
+                    7: { cellWidth: 20 },
                     8: { cellWidth: 45, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 8 },
+                    10: { cellWidth: 12 },
                     11: { cellWidth: 12, fontStyle: 'bold', fontSize: 7 },
                     12: { cellWidth: 12 },
                     13: { cellWidth: 15 },
@@ -328,7 +328,7 @@ export default function ReporteVentaVerdePage() {
   const renderStatus = () => {
     switch (status) {
         case 'parsing':
-            return (
+             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                     <Loader2 className="w-12 h-12 text-primary animate-spin" />
                     <p className="text-lg font-semibold text-foreground">Procesando tu archivo Excel...</p>
@@ -486,5 +486,6 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
 
 
