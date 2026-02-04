@@ -91,11 +91,16 @@ export default {
         'gradient': {
           'to': { 'background-position': '200% center' },
         },
+        'wiggle': {
+          '0%, 100%': { transform: 'rotate(-10deg)' },
+          '50%': { transform: 'rotate(10deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'gradient': 'gradient 3s linear infinite',
+        'wiggle': 'wiggle 1s ease-in-out infinite',
       },
     },
   },

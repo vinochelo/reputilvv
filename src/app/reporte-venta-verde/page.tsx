@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw, Wand2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -261,9 +261,9 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 16 },
+                    0: { cellWidth: 15 },
                     1: { cellWidth: 26 },
-                    2: { cellWidth: 18 },
+                    2: { cellWidth: 16 },
                     3: { cellWidth: 8 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
@@ -271,7 +271,7 @@ export default function ReporteVentaVerdePage() {
                     7: { cellWidth: 25 },
                     8: { cellWidth: 45, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 10 },
+                    10: { cellWidth: 12 },
                     11: { cellWidth: 13 },
                     12: { cellWidth: 13 },
                     13: { cellWidth: 13 },
@@ -342,14 +342,16 @@ export default function ReporteVentaVerdePage() {
         case 'generating':
             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <Loader2 className="w-16 h-16 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Generando PDF, por favor espera...</p>
-                    <div className="w-full space-y-4">
-                        <Progress value={progress} className="h-6" />
-                        <p className="text-3xl text-center font-bold text-primary animate-pulse tabular-nums">
-                            {Math.round(progress)}%
-                        </p>
+                    <div className="relative w-24 h-24">
+                        <Wand2 className="w-20 h-20 text-primary animate-wiggle" />
+                        <Sparkles className="absolute top-0 right-0 w-8 h-8 text-accent animate-pulse" />
+                        <Sparkles className="absolute bottom-2 left-0 w-6 h-6 text-accent/70 animate-pulse delay-200" />
                     </div>
+                    <p className="text-xl font-semibold text-foreground">¡Haciendo un poco de magia!</p>
+                    <p className="text-sm text-muted-foreground">Tu reporte está casi listo...</p>
+                    <p className="text-3xl text-center font-bold text-primary tabular-nums animate-pulse">
+                        {Math.round(progress)}%
+                    </p>
                     <Button variant="destructive" size="sm" onClick={() => (cancelPdfGeneration.current = true)}>
                         <XCircle className="mr-2 h-4 w-4" />
                         Cancelar
