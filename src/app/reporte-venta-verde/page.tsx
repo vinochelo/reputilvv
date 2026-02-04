@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw, Factory, FileText, FileCheck } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -176,7 +176,6 @@ export default function ReporteVentaVerdePage() {
     setStatus('generating');
     setProgress(0);
     cancelPdfGeneration.current = false;
-    await new Promise(resolve => setTimeout(resolve, 50));
     
     try {
         const pdf = new jsPDF('l', 'mm', 'a4');
@@ -261,18 +260,18 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 14 },
-                    1: { cellWidth: 32 },
-                    2: { cellWidth: 12 },
-                    3: { cellWidth: 7 },
+                    0: { cellWidth: 15 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 13 },
+                    3: { cellWidth: 9 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 15 },
                     6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 28 },
+                    7: { cellWidth: 24 },
                     8: { cellWidth: 45, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 10 },
-                    11: { cellWidth: 12 },
+                    10: { cellWidth: 8 },
+                    11: { cellWidth: 12, fontStyle: 'bold', fontSize: 7 },
                     12: { cellWidth: 12 },
                     13: { cellWidth: 15 },
                 },
@@ -338,13 +337,9 @@ export default function ReporteVentaVerdePage() {
             );
         case 'generating':
             return (
-                <div className="flex flex-col items-center justify-center space-y-6 text-center">
-                    <div className="relative w-60 h-20 overflow-hidden">
-                        <FileText className="absolute top-1/2 -translate-y-1/2 w-10 h-10 text-green-600 animate-factory-in" />
-                        <Factory className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 text-primary/80" />
-                        <FileCheck className="absolute top-1/2 -translate-y-1/2 w-10 h-10 text-primary animate-factory-out" />
-                    </div>
-                    <p className="text-xl font-semibold text-foreground">Produciendo tu reporte...</p>
+                <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                    <p className="text-lg font-semibold text-foreground">Generando PDF...</p>
                     <div className="w-full max-w-sm pt-2 space-y-2">
                          <Progress value={progress} />
                          {processedData && <p className="text-sm text-muted-foreground">Página {Math.min(Math.ceil(progress * processedData.length / 100), processedData.length)} de {processedData.length}</p>}
@@ -491,4 +486,5 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
 
