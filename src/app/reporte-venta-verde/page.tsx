@@ -261,13 +261,13 @@ export default function ReporteVentaVerdePage() {
                 },
                 columnStyles: {
                     0: { cellWidth: 19 },
-                    1: { cellWidth: 22 },
+                    1: { cellWidth: 26 },
                     2: { cellWidth: 18 },
                     3: { cellWidth: 9 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 16 },
                     6: { cellWidth: 37, fontSize: 5 },
-                    7: { cellWidth: 34 },
+                    7: { cellWidth: 30 },
                     8: { cellWidth: 44, fontSize: 5 },
                     9: { cellWidth: 10 },
                     10: { cellWidth: 12 },
@@ -486,6 +486,3 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
-
-
-
