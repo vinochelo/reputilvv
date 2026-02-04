@@ -228,7 +228,7 @@ export default function ReporteVentaVerdePage() {
 
             autoTable(pdf, {
                 startY: 20,
-                margin: { left: 7 },
+                margin: { left: 5 },
                 head: head,
                 body: body,
                 foot: foot,
@@ -260,20 +260,20 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 16 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 15 },
-                    3: { cellWidth: 8 },
+                    0: { cellWidth: 17 },
+                    1: { cellWidth: 21 },
+                    2: { cellWidth: 17 },
+                    3: { cellWidth: 10 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 16 },
-                    6: { cellWidth: 40 },
-                    7: { cellWidth: 22 },
-                    8: { cellWidth: 39 },
-                    9: { cellWidth: 10 },
-                    10: { cellWidth: 11 },
+                    6: { cellWidth: 45 },
+                    7: { cellWidth: 24 },
+                    8: { cellWidth: 45 },
+                    9: { cellWidth: 12 },
+                    10: { cellWidth: 12 },
                     11: { cellWidth: 13 },
-                    12: { cellWidth: 16 },
-                    13: { cellWidth: 16 },
+                    12: { cellWidth: 15 },
+                    13: { cellWidth: 15 },
                 },
                 didParseCell: function (data) {
                     if (data.row.section === 'body') {
@@ -290,7 +290,7 @@ export default function ReporteVentaVerdePage() {
                 }
             });
             
-            await new Promise(resolve => setTimeout(resolve, 5));
+            await new Promise(resolve => setTimeout(resolve, 50));
             setProgress(((i + 1) / totalPages) * 100);
         }
 
@@ -339,16 +339,12 @@ export default function ReporteVentaVerdePage() {
         case 'generating':
             return (
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Generando PDF...</p>
-                    <div className="w-full max-w-sm pt-2 space-y-2">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                  <p className="text-lg font-semibold text-foreground">Generando PDF...</p>
+                   <div className="w-full max-w-sm pt-2 space-y-2">
                          <Progress value={progress} />
                          {processedData && <p className="text-sm text-muted-foreground">Página {Math.min(Math.ceil(progress * processedData.length / 100), processedData.length)} de {processedData.length}</p>}
                     </div>
-                    <Button variant="destructive" size="sm" onClick={() => (cancelPdfGeneration.current = true)}>
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancelar
-                    </Button>
                 </div>
             );
         case 'success':
