@@ -260,18 +260,18 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 18 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 18 },
-                    3: { cellWidth: 9 },
+                    0: { cellWidth: 16 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 15 },
+                    3: { cellWidth: 8 },
                     4: { cellWidth: 15 },
                     5: { cellWidth: 16 },
-                    6: { cellWidth: 48 },
-                    7: { cellWidth: 25 },
-                    8: { cellWidth: 40 },
+                    6: { cellWidth: 40 },
+                    7: { cellWidth: 22 },
+                    8: { cellWidth: 39 },
                     9: { cellWidth: 10 },
                     10: { cellWidth: 11 },
-                    11: { cellWidth: 15 },
+                    11: { cellWidth: 13 },
                     12: { cellWidth: 16 },
                     13: { cellWidth: 16 },
                 },
@@ -290,6 +290,7 @@ export default function ReporteVentaVerdePage() {
                 }
             });
             
+            await new Promise(resolve => setTimeout(resolve, 5));
             setProgress(((i + 1) / totalPages) * 100);
         }
 
