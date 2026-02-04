@@ -260,20 +260,20 @@ export default function ReporteVentaVerdePage() {
                     lineWidth: 0.1,
                 },
                 columnStyles: {
-                    0: { cellWidth: 16 },
+                    0: { cellWidth: 15 },
                     1: { cellWidth: 25 },
-                    2: { cellWidth: 18 },
+                    2: { cellWidth: 20 },
                     3: { cellWidth: 9 },
                     4: { cellWidth: 15 },
-                    5: { cellWidth: 15 },
-                    6: { cellWidth: 40, fontSize: 5 },
-                    7: { cellWidth: 28 },
-                    8: { cellWidth: 44, fontSize: 5 },
+                    5: { cellWidth: 13 },
+                    6: { cellWidth: 35, fontSize: 5 },
+                    7: { cellWidth: 30 },
+                    8: { cellWidth: 38, fontSize: 5 },
                     9: { cellWidth: 10 },
-                    10: { cellWidth: 14 },
+                    10: { cellWidth: 11 },
                     11: { cellWidth: 14 },
-                    12: { cellWidth: 16 },
-                    13: { cellWidth: 15 },
+                    12: { cellWidth: 15 },
+                    13: { cellWidth: 17 },
                 },
                 didParseCell: function (data) {
                     if (data.row.section === 'body') {
@@ -486,3 +486,4 @@ export default function ReporteVentaVerdePage() {
     </main>
   );
 }
+
