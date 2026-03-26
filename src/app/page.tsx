@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { FileText, Building, Mail, ShieldCheck, ArrowRight, Wrench, type LucideIcon } from 'lucide-react';
+import { FileText, Building, Mail, ShieldCheck, ArrowRight, Wrench, CheckCircle, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -29,16 +29,22 @@ const mainTools: Tool[] = [
     icon: Building,
   },
   {
-    title: 'Envío correos en masa',
-    description: 'Envía correos personalizados a una lista de contactos.',
-    href: 'https://mails-gamma.vercel.app/',
-    icon: Mail,
-  },
-  {
     title: 'Control de retenciones',
     description: 'Seguimiento de retenciones anuladas',
     href: 'https://extractor-kohl.vercel.app/',
     icon: ShieldCheck,
+  },
+  {
+    title: 'Autorizaciones',
+    description: 'Gestión y consulta de autorizaciones de documentos.',
+    href: 'https://autorizaciones.vercel.app/',
+    icon: CheckCircle,
+  },
+  {
+    title: 'Envío correos en masa',
+    description: 'Envía correos personalizados a una lista de contactos.',
+    href: 'https://mails-gamma.vercel.app/',
+    icon: Mail,
   },
 ];
 
