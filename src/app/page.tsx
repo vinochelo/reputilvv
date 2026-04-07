@@ -42,8 +42,8 @@ const mainTools: Tool[] = [
   },
   {
     title: 'Envío correos en masa',
-    description: 'Envía correos personalizados a una lista de contactos.',
-    href: 'https://mails-gamma.vercel.app/',
+    description: 'Envía correos personalizados a una lista de contactos (Versión Sigma).',
+    href: 'https://correos-sigma.vercel.app/',
     icon: Mail,
   },
 ];
@@ -68,6 +68,13 @@ const secondaryTools: Tool[] = [
     description: 'Versión anterior para procesar reportes. Se moverá a producción pronto.',
     href: '/reporte-retail',
     icon: Building,
+    status: 'beta',
+  },
+  {
+    title: 'Envío correos en masa (Respaldo)',
+    description: 'Versión anterior para el envío de correos.',
+    href: 'https://mails-gamma.vercel.app/',
+    icon: Mail,
     status: 'beta',
   },
 ];
