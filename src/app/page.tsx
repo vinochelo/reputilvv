@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { FileText, Building, Mail, ShieldCheck, ArrowRight, Wrench, CheckCircle, type LucideIcon } from 'lucide-react';
+import { FileText, Building, Mail, ShieldCheck, ArrowUpRight, Wrench, CheckCircle, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -83,26 +83,39 @@ const ToolCard = ({ tool }: { tool: Tool }) => (
     <Link 
         href={tool.href} 
         key={tool.title} 
-        className="block group h-full"
+        className="group block h-full outline-none"
         target={tool.href.startsWith('http') ? '_blank' : undefined}
         rel={tool.href.startsWith('http') ? 'noopener noreferrer' : undefined}
     >
-        <Card className="h-full flex flex-col p-6 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl rounded-2xl border-2 border-transparent hover:border-primary/50 bg-card/50 dark:bg-card">
-            <div className="flex-grow">
-                <div className={cn(
-                    "bg-primary/10 p-3 rounded-full self-start inline-block mb-4"
-                )}>
-                    <tool.icon className={cn(
-                        "w-6 h-6 text-primary transition-transform duration-500 group-hover:rotate-[360deg] group-hover:scale-110",
-                        { "text-destructive": tool.status === 'beta' }
-                    )} />
+        <Card className="relative h-full overflow-hidden border border-border/40 bg-background/40 backdrop-blur-xl transition-all duration-500 hover:border-primary/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 dark:bg-zinc-900/40 dark:hover:shadow-[0_8px_30px_rgba(59,130,246,0.1)]">
+            {/* Subtle gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            
+            <div className="relative p-6 flex flex-col h-full z-10">
+                <div className="flex items-start justify-between mb-6">
+                    <div className={cn(
+                        "p-3 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 transition-all duration-500 group-hover:bg-primary group-hover:text-primary-foreground group-hover:ring-primary/50 group-hover:shadow-lg group-hover:shadow-primary/20",
+                        { "bg-destructive/10 text-destructive ring-destructive/20 group-hover:bg-destructive group-hover:text-destructive-foreground group-hover:ring-destructive/50 group-hover:shadow-destructive/20": tool.status === 'beta' }
+                    )}>
+                        <tool.icon className="w-6 h-6" strokeWidth={1.5} />
+                    </div>
+                    {/* Arrow indicator */}
+                    <div className="bg-background/80 backdrop-blur-sm p-2 rounded-full opacity-0 -translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 border border-border/50 text-foreground/50 group-hover:text-foreground shadow-sm">
+                        <ArrowUpRight className="w-4 h-4" />
+                    </div>
                 </div>
-                <h2 className="font-headline text-xl font-bold">{tool.title}</h2>
-                <p className="mt-2 text-sm text-foreground/70">{tool.description}</p>
-            </div>
-            <div className="flex items-center text-sm font-semibold text-primary mt-6">
-                Ir a la herramienta
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                
+                <div className="flex-grow">
+                    <div className="flex items-center gap-2 mb-2">
+                        <h2 className="font-semibold text-lg tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">{tool.title}</h2>
+                        {tool.status === 'beta' && (
+                            <span className="text-[10px] font-medium uppercase tracking-wider bg-destructive/10 text-destructive px-2 py-0.5 rounded-full border border-destructive/20">
+                                Beta
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{tool.description}</p>
+                </div>
             </div>
         </Card>
     </Link>
@@ -111,57 +124,73 @@ const ToolCard = ({ tool }: { tool: Tool }) => (
 
 export default function Home() {
   return (
-    <main>
-      <section className="bg-muted/30 dark:bg-muted/10 border-b">
-        <div className="container mx-auto px-4 py-8 sm:py-12">
-          <div className="text-center">
-            <div className="flex justify-center items-baseline gap-1 mb-2" aria-label="ETAFASHION RM">
-              <span className="font-headline font-light text-foreground text-5xl">
-                ETAFASHION
-              </span>
-              <span className="font-headline font-bold text-destructive text-5xl">
-                RM
-              </span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-headline font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-foreground via-destructive to-foreground bg-[length:200%_auto] bg-clip-text text-transparent animate-gradient">
-                Portal de Herramientas
-              </span>
-            </h1>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen bg-background relative overflow-hidden selection:bg-primary/30 selection:text-primary-foreground">
+      {/* Sleek background effect: Grid + Glow */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] opacity-30 dark:opacity-20 pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/40 via-blue-500/40 to-purple-500/40 blur-[100px]" />
+      </div>
 
-      <section className="container mx-auto px-4 py-16 sm:py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {mainTools.map((tool) => (
-            <ToolCard tool={tool} key={tool.title} />
-          ))}
-        </div>
-        
-        <div className="max-w-4xl mx-auto mt-16">
-          <Accordion type="single" collapsible className="w-full bg-card/50 dark:bg-card rounded-2xl border px-6">
-            <AccordionItem value="secondary-tools" className="border-b-0">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline py-6">
-                  <div className="flex items-center gap-3">
-                      <Wrench className="w-6 h-6 text-primary/80" />
-                      <span>Herramientas Beta y de Respaldo</span>
+      <div className="relative mx-auto max-w-6xl px-6 py-16 sm:py-24 lg:px-8 z-10 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="flex flex-col items-center text-center max-w-3xl mx-auto mb-20 space-y-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-muted/40 border border-border/50 text-sm font-medium text-muted-foreground backdrop-blur-sm shadow-sm">
+            <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
+            Workspace <span className="text-foreground/80 font-bold ml-1">ETAFASHION RM</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-5xl font-bold tracking-tight text-foreground">
+            Portal de <span className="bg-gradient-to-b from-primary to-primary/60 dark:from-foreground dark:to-foreground/60 bg-clip-text text-transparent">Herramientas</span>
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
+            Central de productividad y gestión. Accede rápidamente a todos tus reportes y herramientas de automatización empresariales.
+          </p>
+        </header>
+
+        {/* Main Grid */}
+        <main className="flex-grow w-full">
+          {/* Main Tools Container (Bento style) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {/* Make the first card span 2 cols on lg, for a slight bento effect, or just keep it symmetric. Let's keep it clean symmetric. */}
+            {mainTools.map((tool) => (
+              <ToolCard tool={tool} key={tool.title} />
+            ))}
+          </div>
+          
+          <div className="max-w-4xl mx-auto mt-24">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="secondary-tools" className="border border-border/50 rounded-2xl bg-card/30 backdrop-blur-xl overflow-hidden data-[state=open]:shadow-lg hover:border-border/80 transition-all">
+                <AccordionTrigger className="text-base font-medium hover:no-underline px-6 py-5 data-[state=open]:bg-muted/20 transition-colors">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                            <Wrench className="w-5 h-5" />
+                        </div>
+                        <span>Herramientas Secundarias y Beta</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-4 border-t border-border/50 bg-background/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {secondaryTools.map((tool) => (
+                        <ToolCard tool={tool} key={tool.title} />
+                    ))}
                   </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2 pb-6">
-                  {secondaryTools.map((tool) => (
-                      <ToolCard tool={tool} key={tool.title} />
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
-      </section>
-      <footer className="text-center py-8 text-sm text-foreground/60">
-        <p>© 2026 Rocku. Todos los derechos reservados.</p>
-      </footer>
-    </main>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </main>
+
+        <footer className="mt-auto pt-16 pb-8 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground w-full">
+          <p>© {new Date().getFullYear()} Creado por Rocku. Todos los derechos reservados.</p>
+          <div className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            Sistemas Operativos
+          </div>
+        </footer>
+      </div>
+    </div>
   );
 }
+

@@ -5,7 +5,7 @@ import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileDown, Loader2, XCircle, ArrowLeft, CheckCircle, RefreshCw, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -330,30 +330,42 @@ export default function ReporteVentaVerdePage() {
     switch (status) {
         case 'parsing':
              return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-lg font-semibold text-foreground">Procesando tu archivo Excel...</p>
+                <div className="flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in zoom-in duration-300">
+                    <div className="p-4 bg-primary/10 rounded-full mb-2">
+                        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                    </div>
+                    <p className="text-xl font-semibold tracking-tight text-foreground">Procesando tu archivo Excel...</p>
                     <p className="text-sm text-muted-foreground">{fileName}</p>
                 </div>
             );
         case 'generating':
             return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                  <p className="text-lg font-semibold text-foreground">Generando PDF...</p>
-                   <div className="w-full max-w-sm pt-2 space-y-2">
-                         <Progress value={progress} />
-                         {processedData && <p className="text-sm text-muted-foreground">Página {Math.min(Math.ceil(progress * processedData.length / 100), processedData.length)} de {processedData.length}</p>}
+                <div className="flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in zoom-in duration-300">
+                  <div className="p-4 bg-primary/10 rounded-full mb-2 relative">
+                      <div className="absolute inset-0 border-4 border-t-primary border-primary/20 rounded-full animate-spin"></div>
+                      <FileDown className="w-8 h-8 text-primary opacity-50" />
+                  </div>
+                  <p className="text-xl font-semibold tracking-tight text-foreground">Generando PDF...</p>
+                   <div className="w-full max-w-md pt-4 space-y-3">
+                         <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                             <div className="h-full bg-gradient-to-r from-primary to-blue-500 transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+                         </div>
+                         {processedData && <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Página {Math.min(Math.ceil(progress * processedData.length / 100), processedData.length)} de {processedData.length}</p>}
                     </div>
                 </div>
             );
         case 'success':
             return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-600" />
-                    <p className="text-lg font-semibold text-foreground">¡PDF Generado con Éxito!</p>
-                    <p className="text-sm text-muted-foreground">Tu descarga ha comenzado para: {fileName}</p>
-                    <Button onClick={resetState}>
+                <div className="flex flex-col items-center justify-center space-y-6 text-center animate-in fade-in zoom-in duration-500">
+                    <div className="p-5 bg-emerald-500/10 rounded-full relative">
+                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping"></div>
+                        <CheckCircle className="w-12 h-12 text-emerald-500" />
+                    </div>
+                    <div>
+                        <p className="text-2xl font-bold tracking-tight text-foreground">¡Reporte Generado con Éxito!</p>
+                        <p className="text-sm text-muted-foreground mt-2">La descarga ha comenzado autómaticamente para: <br/><span className="font-medium text-foreground">{fileName}</span></p>
+                    </div>
+                    <Button onClick={resetState} className="mt-4 shadow-lg shadow-primary/20 transition-all hover:scale-105">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Generar Otro Reporte
                     </Button>
@@ -361,11 +373,15 @@ export default function ReporteVentaVerdePage() {
             );
         case 'error':
              return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <XCircle className="w-12 h-12 text-destructive" />
-                    <p className="text-lg font-semibold text-foreground">Ocurrió un Error</p>
-                    <p className="text-sm text-muted-foreground">No se pudo generar el reporte. Por favor, revisa el archivo e inténtalo de nuevo.</p>
-                    <Button variant="outline" onClick={resetState}>
+                <div className="flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in zoom-in duration-300">
+                    <div className="p-4 bg-destructive/10 rounded-full mb-2">
+                        <XCircle className="w-12 h-12 text-destructive" />
+                    </div>
+                    <div>
+                        <p className="text-xl font-bold tracking-tight text-foreground">Ocurrió un Error</p>
+                        <p className="text-sm text-muted-foreground mt-1 max-w-sm">No se pudo generar el reporte. Por favor, revisa el archivo de Excel y vuelve a intentarlo.</p>
+                    </div>
+                    <Button variant="outline" onClick={resetState} className="mt-2 hover:bg-destructive hover:text-destructive-foreground transition-colors">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Intentar de Nuevo
                     </Button>
@@ -374,12 +390,16 @@ export default function ReporteVentaVerdePage() {
         case 'idle':
         default:
             return (
-                <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                    <UploadCloud className="w-16 h-16 text-primary" />
-                    <p className="text-lg font-semibold text-foreground">Haz clic para subir tu archivo de Excel</p>
-                    <p className="text-muted-foreground">El PDF se generará y descargará al instante</p>
-                    <Button onClick={() => fileInputRef.current?.click()}>
-                        <FileDown className="mr-2 h-4 w-4" />
+                <div className="flex flex-col items-center justify-center space-y-6 text-center">
+                    <div className="w-24 h-24 rounded-full bg-primary/5 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-500">
+                        <UploadCloud className="w-12 h-12 text-primary/80" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                        <p className="text-xl font-semibold tracking-tight text-foreground">Haz clic para subir tu archivo Excel</p>
+                        <p className="text-sm text-muted-foreground mt-2">El archivo PDF se generará y descargará al instante</p>
+                    </div>
+                    <Button onClick={() => fileInputRef.current?.click()} size="lg" className="shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all w-full sm:w-auto">
+                        <FileDown className="mr-2 h-5 w-5" />
                         Seleccionar Archivo
                     </Button>
                     <input
@@ -395,91 +415,98 @@ export default function ReporteVentaVerdePage() {
   }
 
   return (
-    <main className="container mx-auto px-4 py-12">
-      <div className="mb-8">
-        <Link href="/" className="inline-flex items-center text-sm font-medium text-primary hover:underline">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver al portal
-        </Link>
+    <div className="min-h-screen bg-background relative overflow-hidden selection:bg-primary/30 selection:text-primary-foreground">
+      {/* Sleek background effect: Grid + Glow */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] opacity-30 dark:opacity-20 pointer-events-none [mask-image:radial-gradient(ellipse_at_center,black,transparent_80%)]">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/30 via-primary/40 to-blue-500/40 blur-[100px]" />
       </div>
 
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-headline font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Reportes de utilidad venta en verde
-        </h1>
-        <p className="mt-4 max-w-2xl mx-auto text-lg text-foreground/80">
-          Sube tu archivo de Excel para generar un reporte PDF listo para imprimir. La descarga comenzará automáticamente.
-        </p>
+      <div className="relative mx-auto max-w-5xl px-6 py-12 lg:px-8 z-10 flex flex-col min-h-screen">
+        <div className="mb-10 flex justify-center sm:justify-start">
+            <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/40 border border-border/50 text-sm font-medium text-muted-foreground backdrop-blur-sm shadow-sm hover:bg-muted/60 hover:text-foreground transition-all">
+                <ArrowLeft className="w-4 h-4" />
+                Volver al Workspace
+            </Link>
+        </div>
+
+        <header className="flex flex-col items-center text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20 mb-2">
+                <FileText className="w-6 h-6" strokeWidth={1.5} />
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+                Venta en <span className="bg-gradient-to-br from-emerald-500 to-emerald-700 bg-clip-text text-transparent">Verde</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl">
+                Sube tu reporte resumido en Excel y obtén los reportes individuales listos para imprimir en PDF de forma automática.
+            </p>
+        </header>
+
+        <main className="flex-grow w-full max-w-3xl mx-auto">
+            <Card className="relative overflow-hidden border border-border/40 bg-background/40 backdrop-blur-xl shadow-2xl shadow-primary/5 transition-all">
+                {/* Glowing border effect at the top */}
+                <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+                <CardContent className="p-8 sm:p-12 min-h-[350px] flex items-center justify-center group">
+                    {renderStatus()}
+                </CardContent>
+            </Card>
+            
+            <div className="grid md:grid-cols-2 gap-6 mt-16">
+                <section className="col-span-1 md:col-span-2">
+                    <h3 className="text-2xl font-bold tracking-tight mb-6 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span className="font-semibold text-sm">1</span>
+                        </div>
+                        ¿Cómo funciona?
+                    </h3>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                        <div className="p-5 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/40">
+                            <UploadCloud className="w-6 h-6 text-primary/70 mb-3" />
+                            <h4 className="font-semibold mb-1">Sube el Archivo</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Carga tu exportación de SAP en formato Excel.</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/40">
+                            <RefreshCw className="w-6 h-6 text-primary/70 mb-3" />
+                            <h4 className="font-semibold mb-1">Cálculo Preciso</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">Agrupamos y calculamos automáticamente los totales.</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-card/30 backdrop-blur-sm border border-border/40">
+                            <CheckCircle className="w-6 h-6 text-emerald-500/70 mb-3" />
+                            <h4 className="font-semibold mb-1">PDF Listo</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">El documento formateado se descarga sin demoras.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="col-span-1 md:col-span-2 mt-8">
+                    <div className="p-6 sm:p-8 rounded-3xl bg-muted/20 backdrop-blur-xl border border-border/40">
+                        <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-3">
+                            Extracción desde SAP
+                            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium tracking-wide">GUÍA</span>
+                        </h3>
+                        <ol className="relative border-s border-border/60 ml-3 space-y-6">
+                            <li className="ms-6">
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-background rounded-full -start-3 ring-4 ring-background border border-border/80 text-xs font-bold text-muted-foreground">1</span>
+                                <p className="text-sm text-foreground/90 leading-relaxed">Ejecuta la transacción <strong className="text-primary font-mono bg-primary/5 px-1 py-0.5 rounded">ZMM_UTILIDAD_VV</strong> en el sistema SAP.</p>
+                            </li>
+                            <li className="ms-6">
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-background rounded-full -start-3 ring-4 ring-background border border-border/80 text-xs font-bold text-muted-foreground">2</span>
+                                <p className="text-sm text-foreground/90 leading-relaxed">Configura el <strong>rango de fechas</strong> a evaluar y define el rango de documentos en "Número de documento" (ej. de 52000xxxx0 a 52000xxxx9).</p>
+                            </li>
+                            <li className="ms-6">
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-background rounded-full -start-3 ring-4 ring-background border border-border/80 text-xs font-bold text-muted-foreground">3</span>
+                                <p className="text-sm text-foreground/90 leading-relaxed">Presiona <strong className="bg-muted px-1.5 py-0.5 rounded shadow-sm text-xs border border-border">F8</strong> o clic en Ejecutar para generar la tabla de resultados.</p>
+                            </li>
+                            <li className="ms-6">
+                                <span className="absolute flex items-center justify-center w-6 h-6 bg-background rounded-full -start-3 ring-4 ring-background border border-border/80 text-xs font-bold text-muted-foreground">4</span>
+                                <p className="text-sm text-foreground/90 leading-relaxed">Ve al menú <strong className="font-medium">Exportar &gt; Hoja de Cálculo</strong>, guarda el archivo como Excel y súbelo aquí arriba.</p>
+                            </li>
+                        </ol>
+                    </div>
+                </section>
+            </div>
+        </main>
       </div>
-
-      <Card className="max-w-2xl mx-auto shadow-lg">
-          <CardContent className="p-8 min-h-[250px] flex items-center justify-center">
-            {renderStatus()}
-          </CardContent>
-      </Card>
-      
-      <section className="mt-16 max-w-4xl mx-auto">
-        <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
-          Instrucciones para obtener el Excel de SAP
-        </h3>
-        <div className="bg-muted/50 p-6 rounded-lg">
-            <ol className="list-decimal list-inside space-y-4 text-foreground/90">
-                <li>
-                    Ingresa a SAP y ejecuta la transacción <strong>ZMM_UTILIDAD_VV</strong>.
-                </li>
-                <li>
-                    En el campo de selección de fechas, coloca el <strong>rango de fechas</strong> correspondiente a las facturas que deseas procesar.
-                </li>
-                <li>
-                    En la sección <strong>"Número de documento"</strong>, especifica el rango de los documentos FI. Debes usar el primer y el último número de documento del período (ej: desde 52000xxxx0 hasta 52000xxxx9).
-                </li>
-                <li>
-                    Haz clic en <strong>Ejecutar</strong> (o presiona F8).
-                </li>
-                <li>
-                    Una vez que se muestren los resultados, ve al menú <strong>Exportar &gt; Hoja de Cálculo</strong>.
-                </li>
-                <li>
-                    Guarda el archivo en formato Excel, asígnale un nombre descriptivo y ¡listo! Ya puedes subirlo a esta herramienta.
-                </li>
-            </ol>
-        </div>
-      </section>
-
-      <section className="mt-16 max-w-4xl mx-auto">
-        <h3 className="text-3xl font-headline font-bold text-center mb-8 text-foreground">
-          ¿Cómo funciona?
-        </h3>
-        <div className="grid md:grid-cols-3 gap-8 text-center">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">1</span>
-            </div>
-            <h4 className="text-xl font-semibold text-foreground">Sube tu Archivo</h4>
-            <p className="text-foreground/80">
-              Arrastra o selecciona tu archivo de Excel (.xlsx o .xls) con los datos de la venta en verde.
-            </p>
-          </div>
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">2</span>
-            </div>
-            <h4 className="text-xl font-semibold text-foreground">Procesamiento Automático</h4>
-            <p className="text-foreground/80">
-              La aplicación procesa los datos y genera un PDF al instante, sin pasos intermedios.
-            </p>
-          </div>
-          <div className="flex flex-col items-center space-y-2">
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
-              <span className="text-2xl font-bold">3</span>
-            </div>
-            <h4 className="text-xl font-semibold text-foreground">Descarga Instantánea</h4>
-            <p className="text-foreground/80">
-              Se inicia automáticamente la descarga de un archivo PDF listo para imprimir con todos tus reportes.
-            </p>
-          </div>
-        </div>
-      </section>
-    </main>
+    </div>
   );
 }
